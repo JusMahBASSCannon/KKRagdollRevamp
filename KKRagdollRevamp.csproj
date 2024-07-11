@@ -1,0 +1,116 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <Configurations>KK;KKS</Configurations>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KK|AnyCPU'">
+    <AssemblyName>KKRagdollRevamp</AssemblyName>
+    <TargetFramework>net35</TargetFramework>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='KKS|AnyCPU'">
+    <AssemblyName>KKSRagdollRevamp</AssemblyName>
+    <TargetFramework>net48</TargetFramework>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='KK|AnyCPU'">
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\Programs\Koikatsu\[OPTIONAL] BRExtras\Vanilla Assembly\Koikatu_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>..\Programs\Koikatsu\[OPTIONAL] BRExtras\Vanilla Assembly\Koikatu_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+    </Reference>
+    <Reference Include="KKABMX">
+      <HintPath>..\Programs\Koikatsu\BepInEx\plugins\KKABMX.dll</HintPath>
+    </Reference>
+    <Reference Include="KKAPI">
+      <HintPath>D:\Stored Content\Programs\Koikatsu\BepInEx\plugins\KKAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="KK_Stiletto">
+      <HintPath>dependencies\KK_Stiletto.dll</HintPath>
+    </Reference>
+    <Reference Include="Timeline">
+      <HintPath>..\Programs\Koikatsu\BepInEx\plugins\Timeline.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>D:\Stored Content\Programs\Koikatsu\CharaStudio_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="BepInEx">
+      <HintPath>D:\Stored Content\Programs\Koikatsu\BepInEx\core\BepInEx.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\Programs\Koikatsu\Koikatu_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='KKS|AnyCPU'">
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+    </Reference>
+    <Reference Include="KKSABMX">
+      <HintPath>..\Programs\Koikatsu Sunshine\BepInEx\plugins\KKSABMX.dll</HintPath>
+    </Reference>
+    <Reference Include="KKSAPI">
+      <HintPath>D:\Stored Content\Programs\Koikatsu Sunshine\BepInEx\plugins\KKSAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="KKS_Stiletto">
+      <HintPath>..\Programs\Koikatsu Sunshine\BepInEx\plugins\KKS_Stiletto.dll</HintPath>
+    </Reference>
+    <Reference Include="Timeline">
+      <HintPath>..\Programs\Koikatsu Sunshine\BepInEx\plugins\Timeline.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>D:\Stored Content\Programs\Koikatsu Sunshine\CharaStudio_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="BepInEx">
+      <HintPath>D:\Stored Content\Programs\Koikatsu Sunshine\BepInEx\core\BepInEx.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>    
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+    <Reference Include="mscorlib">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\mscorlib.dll</HintPath>
+    </Reference>
+    <Reference Include="UniRx">
+      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UniRx.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="dependencies\**" />
+    <EmbeddedResource Remove="dependencies\**" />
+    <None Remove="dependencies\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+</Project>

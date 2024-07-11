@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34221.43
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KKRagdollRevamp", "KKRagdollRevamp.csproj", "{FFA75298-8754-4B78-9948-182B8FEBED34}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3766A2DB-F3A0-41B0-92A9-907FA8597C94}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		KK|Any CPU = KK|Any CPU
+		KKS|Any CPU = KKS|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FFA75298-8754-4B78-9948-182B8FEBED34}.Debug|Any CPU.ActiveCfg = KKS|Any CPU
+		{FFA75298-8754-4B78-9948-182B8FEBED34}.KK|Any CPU.ActiveCfg = KK|Any CPU
+		{FFA75298-8754-4B78-9948-182B8FEBED34}.KK|Any CPU.Build.0 = KK|Any CPU
+		{FFA75298-8754-4B78-9948-182B8FEBED34}.KKS|Any CPU.ActiveCfg = KK|Any CPU
+		{FFA75298-8754-4B78-9948-182B8FEBED34}.KKS|Any CPU.Build.0 = KK|Any CPU
+		{FFA75298-8754-4B78-9948-182B8FEBED34}.Release|Any CPU.ActiveCfg = KKS|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B6EE45C5-4954-4A3A-AADC-EC6DEA0D0CAC}
+	EndGlobalSection
+EndGlobal
