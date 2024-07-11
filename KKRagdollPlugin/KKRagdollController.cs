@@ -57,28 +57,6 @@ public class KKRagdollController : CharaCustomFunctionController
 		public float density;
 
 		public float summedMass;
-
-		/*public bool _isLocked;
-
-		public bool isLocked
-		{
-			get
-			{
-				return _isLocked;
-			}
-			set
-			{
-				_isLocked = value;
-                if (value)
-				{
-					this.anchor.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeAll;
-                }
-				if (!value)
-				{
-                    this.anchor.GetComponent<Rigidbody>().constraints = RigidbodyConstraints.None;
-                }
-            }
-		}*/
 	}
 
 	private string pelvisName = "BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips";
@@ -248,16 +226,6 @@ public class KKRagdollController : CharaCustomFunctionController
 
 	public KKRagdollRevampBase revampBase;
 
-	/* private float armRadiusScaleOverride = 0.15f;
-
-	private float armDensityOverride = 1f;
-
-	private float armMinLimitOverride = -90f;
-
-	private float armMaxLimitOverride = 0f;
-
-	private float armSwingLimitOverride = 0f; */
-
     protected override void OnCardBeingSaved(GameMode currentGameMode)
 	{
 	}
@@ -275,8 +243,6 @@ public class KKRagdollController : CharaCustomFunctionController
 
 	protected override void Update()
 	{
-		// if (base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_j_neck/cf_j_head").GetComponent<Rigidbody>().IsSleeping()) { UnityEngine.Debug.Log("Head Slept!"); }
-		
 		if (ActivateRagdollAll.Value.IsDown())
 		{
 			fireRagdoll = !fireRagdoll;
@@ -304,18 +270,16 @@ public class KKRagdollController : CharaCustomFunctionController
 	}
 
 	bool fkDebug = false;
-	bool ikDisableTest = false;
-	bool whatIsThisLmao = false;
 	float ragdollPreloadDelay = 0.01f;
 
 	private IEnumerator PrepareRagdoll(bool launching)
 	{
-		ragdollTransition = true;
+		ragdollTransition = true; //We set a flag to tell Timeline that the ragdoll is in the midst of toggling so it doesn't spam
 		stilettoInstalled = KKRagdollRevampBase.isStiletto;
         if (launching)
 		{
 			if (stilettoInstalled && StilettoFix.Value) { StilettoCompatibility(true); }
-			yield return new WaitForSeconds(ragdollPreloadDelay);
+			yield return new WaitForSeconds(ragdollPreloadDelay); //We delay the code so our patches can take effect before ragdolling
 		}
         ToggleRagdoll();
 		if (!launching)
@@ -328,7 +292,6 @@ public class KKRagdollController : CharaCustomFunctionController
 
 	private void StilettoCompatibility(bool launching)
 	{
-		//UnityEngine.Debug.Log("Got to ragdoll fix routine");
 		if (launching)
 		{
 			base.transform.gameObject.GetComponent<Stiletto.HeelInfo>().enabled = false;
@@ -352,21 +315,17 @@ public class KKRagdollController : CharaCustomFunctionController
         if (!isRagdoll)
 		{
 			
+			// TODO: Before the ragdoll code can run, we need to handle FK and IK being on.
+			// FK and IK settings in Koikatsu are very weird and run through multiple checks/functions before
+			// toggling, so as far as I can tell, this is not an easy patch. If you can find a way to
+			// seamlessly turn off IK AND FK before the ragdoll begins, I will kiss you. Thx ;3
+			
 			OCIChar ociChar = StudioObjectExtensions.GetOCIChar(base.ChaControl);
 			if (ociChar.oiCharInfo.enableFK || fkDebug)
 			{
 				ociChar.oiCharInfo.enableFK = false;
 				ociChar.ActiveKinematicMode(OICharInfo.KinematicMode.FK, false, true);
 			}
-			if (ikDisableTest)
-			{
-                ociChar.oiCharInfo.enableIK = false;
-				if (whatIsThisLmao)
-				{
-					ociChar.finalIK.enabled = true;
-				}
-                ociChar.ActiveKinematicMode(OICharInfo.KinematicMode.IK, false, true);
-            }
 			ociChar.ChangeLookNeckPtn(3);
 
 
@@ -375,16 +334,9 @@ public class KKRagdollController : CharaCustomFunctionController
 				Rigidbody component = bone.anchor.GetComponent<Rigidbody>();
 				component.isKinematic = false;
 				component.useGravity = true;
-				/* if (bone.name.Contains("Head")) {
-					var currentRotation = bone.anchor.rotation;
-					//var currentEulerAngles = new Vector3(0f, 0f, 0f);
-					//currentRotation.eulerAngles = currentEulerAngles;
-					var neckToggle = GameObject.Find("StudioScene/Canvas Main Menu/02_Manipulate/00_Chara/02_Kinematic/FK & IK/FKIK Toggle Neck");
-					neckToggle.GetComponent<UnityEngine.UI.Toggle>().isOn = false;
-					//bone.anchor.gameObject.GetComponent<Rigidbody>().rotation = currentRotation;
-				} */
 			}
 			base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<Animator>().enabled = false;
+			// We disable KKABMX on the model before ragdolling - this fixes any gliding issues the ragdoll could have.
 			if (ToggleKKABMX.Value) { base.transform.gameObject.GetComponent<KKABMX.Core.BoneController>().enabled = false; }
             if (wasIkOn && AutoIKToggle.Value)
 			{
@@ -398,11 +350,6 @@ public class KKRagdollController : CharaCustomFunctionController
 			Rigidbody component2 = bone2.anchor.GetComponent<Rigidbody>();
 			component2.isKinematic = true;
 			component2.useGravity = false;
-            /* if (bone2.name.Contains("Head"))
-            {
-                var neckToggle = GameObject.Find("StudioScene/Canvas Main Menu/02_Manipulate/00_Chara/02_Kinematic/FK & IK/FKIK Toggle Neck");
-                neckToggle.GetComponent<UnityEngine.UI.Toggle>().isOn = true;
-            } */
         }
 		base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<Animator>().enabled = true;
 		if (ToggleKKABMX.Value) { base.transform.gameObject.GetComponent<KKABMX.Core.BoneController>().enabled = true; }
@@ -554,6 +501,7 @@ public class KKRagdollController : CharaCustomFunctionController
 		AddJoint("Right Arm", rightArm, "Middle Spine", rightArmTwist, rightArmSwing, -95f, 60f, 95f, 95f, typeof(CapsuleCollider), 0.2f, 1f);
 		AddJoint("Left Elbow", leftElbow, "Left Arm", worldUp, worldRight, -155f, 0f, 0f, 0f, typeof(CapsuleCollider), 0.15f, 1f);
 		AddJoint("Right Elbow", rightElbow, "Right Arm", worldUp, worldRight, 0f, 155f, 0f, 0f, typeof(CapsuleCollider), 0.15f, 1f);
+		// These joints are commented out due to twisting bugs with the wrists.
 		//AddJoint("Left Hand", leftHand, "Left Elbow", worldForward, worldRight, -40f, 90f, 30f, 10f, typeof(CapsuleCollider), 0.10f, 1f);
 		//AddJoint("Right Hand", rightHand, "Right Elbow", worldForward, worldRight, -40f, 90f, 30f, 10f, typeof(CapsuleCollider), 0.10f, 1f);
 		AddJoint("Head", head, "Middle Spine", worldRight, worldForward, -60f, 40f, 40f, 70f, null, 1.5f, 1f);
@@ -585,8 +533,6 @@ public class KKRagdollController : CharaCustomFunctionController
 			density = density,
 			colliderType = colliderType,
 			radiusScale = radiusScale,
-			/*isLocked = false,
-			_isLocked = false*/
 		};
 		if (FindBone(parent) != null)
 		{
@@ -636,6 +582,7 @@ public class KKRagdollController : CharaCustomFunctionController
 				}
 			}
 			CapsuleCollider capsuleCollider = bone.anchor.gameObject.AddComponent<CapsuleCollider>();
+			//Below are manual settings for the size of the collisions that we find work a bit better than the automated values.
             if (bone.name.Contains("Foot"))
             {
                 capsuleCollider.direction = 2;
@@ -738,28 +685,8 @@ public class KKRagdollController : CharaCustomFunctionController
 			if (bone.parent != null)
 			{
 				CharacterJoint characterJoint = (bone.joint = bone.anchor.gameObject.AddComponent<CharacterJoint>());
-				/* if (bone.name.Contains("Elbow"))
-				{
-					characterJoint.axis = bone.axis;
-					characterJoint.swingAxis = bone.normalAxis;
-					//characterJoint.axis = bone.normalAxis;
-					//characterJoint.swingAxis = bone.axis;
-					//characterJoint.autoConfigureConnectedAnchor = false;
-					//if (bone.name.Contains("Left"))
-					//{
-     //                   characterJoint.connectedAnchor = new Vector3(-0.25f, 0f, 0f);
-     //               }
-					//if (bone.name.Contains("Right"))
-					//{
-     //                   characterJoint.connectedAnchor = new Vector3(0.25f, 0f, 0f);
-     //               }
-
-                }
-				else
-				{ */
 				characterJoint.axis = CalculateDirectionAxis(bone.anchor.InverseTransformDirection(bone.axis));
 				characterJoint.swingAxis = CalculateDirectionAxis(bone.anchor.InverseTransformDirection(bone.normalAxis));
-				// }
 				characterJoint.anchor = Vector3.zero;
 				characterJoint.connectedBody = bone.parent.anchor.GetComponent<Rigidbody>();
 				characterJoint.enablePreprocessing = false;
@@ -1021,60 +948,4 @@ public class KKRagdollController : CharaCustomFunctionController
 		SphereCollider sphereCollider5 = benis05.gameObject.AddComponent<SphereCollider>();
 		sphereCollider5.radius = num;
 	}
-
-	/* private bool isTwitching = false;
-
-    private List<BoneInfo> twitchBones = new List<BoneInfo>();
-
-	private int twitchForceMin = -200;
-
-	private int twitchForceMax = 200;
-
-	private void TwitchSimPrep()
-	{
-		foreach (BoneInfo bone in bones)
-		{
-			if ((bone.name.Contains("Right")) || (bone.name.Contains("Left")))
-			{
-				twitchBones.Add(bone);
-			}
-		}
-	}
-
-	private void TwitchSimExec()
-	{ 
-		if (!isTwitching && isRagdoll)
-		{
-			StartCoroutine(TwitchSim());
-		}
-	}
-
-    private IEnumerator TwitchSim()
-    {
-		isTwitching = true;
-		UnityEngine.Debug.Log("TWITCH START!");
-        float loopingTime = 20f; // The duration of the loop in seconds.
-        float delay = 2f; // The delay duration in seconds.
-
-        float startTime = Time.time;
-        float endTime = startTime + loopingTime;
-
-		// Loop  for given duration
-		do
-		{
-			UnityEngine.Debug.Log("TWITCH!");
-			var getBone = rnd.Next(twitchBones.Count);
-			var selectedRigid = twitchBones[getBone].anchor.GetComponent<Rigidbody>();
-			float xRandom = rnd.Next(twitchForceMin, twitchForceMax);
-			float yRandom = rnd.Next(twitchForceMin, twitchForceMax);
-			float zRandom = rnd.Next(twitchForceMin, twitchForceMax);
-			selectedRigid.AddForce(new Vector3(xRandom, yRandom, zRandom));
-			yield return new WaitForSeconds(delay);
-		}
-		while (Time.time < endTime);
-		//Reset Vars
-        isTwitching = false;
-		UnityEngine.Debug.Log("TWITCH END");
-    } */
-
 }
