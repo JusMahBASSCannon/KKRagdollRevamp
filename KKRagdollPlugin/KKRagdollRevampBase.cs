@@ -86,12 +86,6 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
     public static ConfigEntry<bool> CollidersFix { get; private set; }
 
-    //DragRigidBody Values
-    /* const float k_Spring = 50.0f;
-    const float k_Damper = 5.0f;
-    const float k_Drag = 10.0f;
-    const float k_AngularDrag = 5.0f;
-    const float k_Distance = 0.2f; */
     const bool k_AttachToCenterOfMass = false;
 
     private SpringJoint m_SpringJoint;
@@ -103,6 +97,7 @@ public class KKRagdollRevampBase : BaseUnityPlugin
             CharacterApi.RegisterExtraBehaviour<KKRagdollController>("KKRagdollPlugin");
         }
 
+        //We ignore these layers of collissions to solve ragdolls hitting the gizmos
         Physics.IgnoreLayerCollision(0, 28);
 
         ActivateRagdoll = base.Config.Bind("Keyboard Shortcuts", "Activate Ragdoll", new KeyboardShortcut(KeyCode.F8), new ConfigDescription("Activates ragdoll for currently selected characters.", null));
@@ -160,6 +155,8 @@ public class KKRagdollRevampBase : BaseUnityPlugin
     {
         PopulateTimeline();
 
+        //Once all plugins are loaded, we run a function to detect if certain mods are installed and 
+        //act accordingly. This is to prevent "missing dependency" errors.
         activePlugins = Chainloader.PluginInfos;
         if (CheckModInstall("Stiletto")) { isStiletto = true; } else { isStiletto = false; }
         if (CheckModInstall("Colliders")) { isCollider = true; } else { isCollider = false; }
@@ -167,24 +164,14 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
     public bool CheckModInstall(System.String modName)
     {
-        //UnityEngine.Debug.Log("Started check mod install");
-        //if (activePlugins.Count == 0)
-        //{
-        //UnityEngine.Debug.Log("activeplugins was 0, so we gave it the chainloader list");
-        //activePlugins = Chainloader.PluginInfos;
-        //}
-        //UnityEngine.Debug.Log("Starting foreach");
         foreach (var plugin in activePlugins)
         {
             var metadata = plugin.Value.Metadata;
-            //UnityEngine.Debug.Log("Found " + metadata.Name + ", looking for " + modName + ".");
             if (metadata.Name == modName)
             {
-                //UnityEngine.Debug.Log("Found it! " + metadata.Name + " / " + modName + " . Passing true.");
                 return true;
             }
         }
-        //UnityEngine.Debug.Log("Code could not find " + modName + ".");
         return false;
     }
 
@@ -192,29 +179,6 @@ public class KKRagdollRevampBase : BaseUnityPlugin
     {
         if (TimelineCompatibility.IsTimelineAvailable())
         {
-            /* TimelineCompatibility.AddInterpolableModelDynamic<object,object>(
-                ("Ragdoll"),
-                ("KKRagdollRevamp"),
-                ("Toggle Ragdoll"),
-                delegate (ObjectCtrlInfo oci, object parameter, object leftValue, object rightValue, float factor)
-                {
-                    ((KKRagdollController)parameter).fireRagdoll = (bool)leftValue;
-                },
-                null,
-                (ObjectCtrlInfo oci) => oci is OCIChar,
-                (ObjectCtrlInfo oci, object parameter) => ((KKRagdollController)parameter).fireRagdoll,
-                (object parameter, XmlNode node) => XmlConvert.ToBoolean(node.Attributes["value"].Value),
-                delegate (object parameter, XmlTextWriter writer, object value)
-                {
-                    writer.WriteAttributeString("value", XmlConvert.ToString((bool)value));
-                },
-                (ObjectCtrlInfo oci) => GetController(((OCIChar)oci).GetChaControl()),
-                (ObjectCtrlInfo oci, XmlNode node) => GetController(((OCIChar)oci).GetChaControl()),
-                null,
-                null,
-                true,
-                (string currentName, ObjectCtrlInfo oci, object parameter) => "Toggle Ragdoll"); */
-
             TimelineCompatibility.AddCharaFunctionInterpolable(
                 ((string)"KKRagdollRevamp"),
                 ((string)"rag"),
@@ -243,35 +207,17 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         return null;
     }
 
-#if KK
-    private void OnGUI()
-    {
-        if (ragdollUiActive && KoikatuAPI.GetCurrentGameMode() == GameMode.Studio)
-        {
-            windowRect = GUI.Window(345, windowRect, WindowFunction, "Koikatsu Ragdoll Revamp");
-            IMGUIUtils.EatInputInRect(windowRect);
-        }
-    }
-#endif
-
     private void Update()
     {
-        /* if (Input.GetKeyDown(KeyCode.F9))
-        {
-            ragdollUiActive = !ragdollUiActive;
-        } */
-
         InitializeDrag();
-
         if (ActivateRagdoll.Value.IsDown())
         {
+            //Detect more than one character selected and toggle ragdolls for all
             IEnumerable<OCIChar> selectedCharacters = StudioAPI.GetSelectedCharacters();
             foreach (OCIChar item in selectedCharacters)
             {
                 currentChaControl = item.GetChaControl();
-                //currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().BroadcastMessage("ToggleRagdoll", SendMessageOptions.RequireReceiver);
                 currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().fireRagdoll = !currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().fireRagdoll;
-                //UnityEngine.Debug.Log("Attempted to send message!");
             }
         }
 
@@ -280,16 +226,6 @@ public class KKRagdollRevampBase : BaseUnityPlugin
             Explosion();
         }
     }
-
-#if KK
-    private void WindowFunction(int WindowID)
-    {
-        if (GUI.Button(new Rect(10, 70, 150, 30), "Toggle Ragdoll"))
-        {
-            UnityEngine.Debug.Log("test");
-        }
-    }
-#endif
 
     private void Explosion()
     {
@@ -300,7 +236,6 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         Collider[] array2 = array;
         foreach (Collider collider in array2)
         {
-            //collider.GetComponentInParent<KKRagdollController>().fireRagdoll = true;
             collider.GetComponent<Rigidbody>()?.AddExplosionForce(ExplodePower.Value, hit.point, ExplodeRadius.Value, ExplodeUpwardsForce.Value);
         }
     }
@@ -311,19 +246,15 @@ public class KKRagdollRevampBase : BaseUnityPlugin
     {
         if (!ClickDragToggle.Value) { return; }
 
-
-
         // Make sure the user pressed the mouse down
         if (!Input.GetMouseButtonDown(0))
         {
-            //UnityEngine.Debug.Log("DragRigidBody code reported that the current input is not 'MouseButton0'");
             return;
         }
 
         var mainCamera = FindCamera();
 
         // We need to actually hit an object
-        //RaycastHit hit = new RaycastHit();
         RaycastHit[] hits;
         hits = Physics.RaycastAll(mainCamera.ScreenPointToRay(Input.mousePosition).origin,
                                 mainCamera.ScreenPointToRay(Input.mousePosition).direction, Mathf.Infinity,
@@ -392,11 +323,6 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         var rotationSpeed = CDRotationSpeed.Value;
         var isRotating = false;
         var lockPosition = new Vector3();
-        //var scrollOld = new Vector3();
-        //var scrollNew = new Vector3();
-        //var scrollTime = 1f;
-        //var lockedRay = new Ray();
-        //var torque = 50f;
         while (Input.GetMouseButton(0))
         {
             var ray = mainCamera.ScreenPointToRay(Input.mousePosition);
@@ -406,17 +332,12 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                 if (!isRotating)
                 {
                     GetCursorPos(out RotationLockPOS);
-                    //m_SpringJoint.connectedBody.constraints = RigidbodyConstraints.FreezePosition;
                     Cursor.visible = false;
                     lockPosition = m_SpringJoint.transform.position;
                 }
                 m_SpringJoint.transform.position = lockPosition;
-                //m_SpringJoint.connectedBody.rotation = Quaternion.Euler(m_SpringJoint.connectedBody.rotation.eulerAngles + new Vector3(rotationSpeed * Input.GetAxis("Mouse X"), rotationSpeed * Input.GetAxis("Mouse Y"), 0f));
 
-                //var EularAngleVelocity = new Vector3(10, 10, 0);
-                //Quaternion deltaRotation = Quaternion.Euler(EularAngleVelocity * Time.fixedDeltaTime);
-                //m_SpringJoint.connectedBody.MoveRotation(m_SpringJoint.connectedBody.rotation * deltaRotation);
-
+                //TODO: Make this work better
                 connectedRB.angularVelocity += new Vector3(Input.GetAxis("Mouse Y"), Input.GetAxis("Mouse X"), 0f) * rotationSpeed;
 
                 isRotating = true;
@@ -427,12 +348,7 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                 {
                     SetCursorPos(RotationLockPOS.X, RotationLockPOS.Y);
                     Cursor.visible = true;
-                    //new WaitForSecondsRealtime(0.2f);
-                    //m_SpringJoint.connectedBody.constraints = RigidbodyConstraints.None;
                 }
-                //scrollOld = m_SpringJoint.transform.position;
-                //scrollNew = (ray.GetPoint(distance) + distanceModifier);
-                //m_SpringJoint.transform.position = Vector3.Lerp(scrollOld, scrollNew, scrollTime);
                 m_SpringJoint.transform.position = (ray.GetPoint(distance) + distanceModifier);
                 if (Input.GetAxis("Mouse ScrollWheel") > 0f)
                 {
