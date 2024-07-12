@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Something not working like it ought to? Let me know!
 title: ''
 labels: bug
 assignees: JusMahBASSCannon
