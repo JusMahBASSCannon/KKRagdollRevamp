@@ -24,9 +24,10 @@ Take advantage of KKRagdollRevamp with the ability to include it in your own ani
 Check the wiki frequently for more features and how to use them! And if you're a coder experienced with Koikatsu plugin creation, pull requests are encouraged. 
 
 # Install
-1. Download the .dll that matches your game version - Koikatsu Sunshine (KKS) or Koikatsu (KK) - and put it in **BepinEx/plugins**
-2. Download the Collision Items zipmod and put it in the **mods** folder **(This is not required if you're updating the mod)**
-3. Fling your waifus
+1. Head to [Releases](https://github.com/JusMahBASSCannon/KKRagdollRevamp/releases)
+2. Download the .dll that matches your game version - Koikatsu Sunshine (KKS) or Koikatsu (KK) - and put it in **BepinEx/plugins**
+3. Download the Collision Items zipmod and put it in the **mods** folder **(This is not required if you're updating the mod)**
+4. Fling your waifus
 
 # How do I use this thing?!?
 Check out [the Wiki!](https://github.com/JusMahBASSCannon/KKRagdollRevamp/wiki)
