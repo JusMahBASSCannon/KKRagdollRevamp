@@ -35,7 +35,7 @@ Check out [the Wiki!](https://github.com/JusMahBASSCannon/KKRagdollRevamp/wiki)
 > [!WARNING] 
 > ### This plugin is still in BETA!
 >
-> I will attempt to keep scene-breaking changes to a minimum, but keep in mind that this plugin is subject to change! Expect glitches, unexpected behavior, and general tomfoolery! Let me know what I can improve in [the Issues tab.](https://github.com/JusMahBASSCannon/KKRagdollRevamp/issues)
+> I will attempt to keep scene-breaking changes to a minimum for people who use this mod in animations, and this mod shouldn't cause any issues outside of itself, but keep in mind that this plugin is subject to change! Expect glitches, unexpected behavior, and general tomfoolery! Let me know what I can improve in [the Issues tab.](https://github.com/JusMahBASSCannon/KKRagdollRevamp/issues)
 
 <hr>
 
