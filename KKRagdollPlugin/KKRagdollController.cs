@@ -21,6 +21,7 @@ using Stiletto;
 using KKAPI.Studio;
 using ADV.Commands.Base;
 using BepInEx.Bootstrap;
+using UniRx.Triggers;
 
 namespace KKRagdollPlugin;
 
@@ -315,12 +316,12 @@ public class KKRagdollController : CharaCustomFunctionController
         if (!isRagdoll)
 		{
 			
-			// TODO: Before the ragdoll code can run, we need to handle FK and IK being on.
-			// FK and IK settings in Koikatsu are very weird and run through multiple checks/functions before
-			// toggling, so as far as I can tell, this is not an easy patch. If you can find a way to
-			// seamlessly turn off IK AND FK before the ragdoll begins, I will kiss you. Thx ;3
-			
-			OCIChar ociChar = StudioObjectExtensions.GetOCIChar(base.ChaControl);
+            // TODO: Before the ragdoll code can run, we need to handle FK and IK being on.
+            // FK and IK settings in Koikatsu are very weird and run through multiple checks/functions before
+            // toggling, so as far as I can tell, this is not an easy patch. If you can find a way to
+            // seamlessly turn off IK AND FK before the ragdoll begins, I will kiss you. Thx ;3
+
+            OCIChar ociChar = StudioObjectExtensions.GetOCIChar(base.ChaControl);
 			if (ociChar.oiCharInfo.enableFK || fkDebug)
 			{
 				ociChar.oiCharInfo.enableFK = false;
@@ -336,6 +337,9 @@ public class KKRagdollController : CharaCustomFunctionController
 				component.useGravity = true;
 			}
 			base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<Animator>().enabled = false;
+			base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<ObservableLateUpdateTrigger>().enabled = false;
+			base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_L/cf_j_shoulder_L/cf_j_arm00_L/cf_j_forearm01_L/cf_j_hand_L/cf_s_hand_L").gameObject.GetComponent<Animator>().enabled = false;
+			base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_R/cf_j_shoulder_R/cf_j_arm00_R/cf_j_forearm01_R/cf_j_hand_R/cf_s_hand_R").gameObject.GetComponent<Animator>().enabled = false;
 			// We disable KKABMX on the model before ragdolling - this fixes any gliding issues the ragdoll could have.
 			if (ToggleKKABMX.Value) { base.transform.gameObject.GetComponent<KKABMX.Core.BoneController>().enabled = false; }
             if (wasIkOn && AutoIKToggle.Value)
@@ -352,7 +356,10 @@ public class KKRagdollController : CharaCustomFunctionController
 			component2.useGravity = false;
         }
 		base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<Animator>().enabled = true;
-		if (ToggleKKABMX.Value) { base.transform.gameObject.GetComponent<KKABMX.Core.BoneController>().enabled = true; }
+        base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<ObservableLateUpdateTrigger>().enabled = true;
+        base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_L/cf_j_shoulder_L/cf_j_arm00_L/cf_j_forearm01_L/cf_j_hand_L/cf_s_hand_L").gameObject.GetComponent<Animator>().enabled = true;
+        base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_R/cf_j_shoulder_R/cf_j_arm00_R/cf_j_forearm01_R/cf_j_hand_R/cf_s_hand_R").gameObject.GetComponent<Animator>().enabled = true;
+        if (ToggleKKABMX.Value) { base.transform.gameObject.GetComponent<KKABMX.Core.BoneController>().enabled = true; }
         if (wasIkOn && AutoIKToggle.Value)
         {
             base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>().enabled = true;
