@@ -27,6 +27,7 @@ namespace KKRagdollPlugin;
 #elif KKS
 [BepInPlugin("jusmahbasscannon.KKSRagdollRevamp", "KKSRagdollRevamp", "0.5.2")]
 #endif
+[BepInProcess("CharaStudio")]
 [BepInDependency("marco.kkapi", "1.32")]
 public class KKRagdollRevampBase : BaseUnityPlugin
 {
