@@ -14,8 +14,8 @@ using System.Security.Permissions;
 [assembly: AssemblyConfiguration("Debug")]
 [assembly: AssemblyDescription("Improved version of RagdollAnon's Ragdoll Plugin")]
 #pragma warning disable CS7035 // The specified version string does not conform to the recommended format - major.minor.build.revision
-[assembly: AssemblyFileVersion("0.5.2")]
+[assembly: AssemblyFileVersion("0.5.3")]
 #pragma warning restore CS7035 // The specified version string does not conform to the recommended format - major.minor.build.revision
-[assembly: AssemblyInformationalVersion("0.5.2")]
+[assembly: AssemblyInformationalVersion("0.5.3")]
 [assembly: AssemblyTitle("Improved version of RagdollAnon's Ragdoll Plugin")]
-[assembly: AssemblyVersion("0.5.2")]
+[assembly: AssemblyVersion("0.5.3")]

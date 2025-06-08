@@ -23,9 +23,9 @@ using BepInEx.Bootstrap;
 namespace KKRagdollPlugin;
 
 #if KK
-[BepInPlugin("jusmahbasscannon.KKRagdollRevamp", "KKRagdollRevamp", "0.5.2")]
+[BepInPlugin("jusmahbasscannon.KKRagdollRevamp", "KKRagdollRevamp", "0.5.3")]
 #elif KKS
-[BepInPlugin("jusmahbasscannon.KKSRagdollRevamp", "KKSRagdollRevamp", "0.5.2")]
+[BepInPlugin("jusmahbasscannon.KKSRagdollRevamp", "KKSRagdollRevamp", "0.5.3")]
 #endif
 [BepInProcess("CharaStudio")]
 [BepInDependency("marco.kkapi", "1.32")]

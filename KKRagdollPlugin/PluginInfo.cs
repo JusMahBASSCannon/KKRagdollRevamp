@@ -14,5 +14,5 @@ public static class PluginInfo
 
 #endif
 
-    public const string PLUGIN_VERSION = "0.5.2 BETA";
+    public const string PLUGIN_VERSION = "0.5.3 BETA";
 }
