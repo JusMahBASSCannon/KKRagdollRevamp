@@ -49,50 +49,50 @@
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)|$(Platform)'=='KKS|AnyCPU'">
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
     <Reference Include="KKSABMX">
-      <HintPath>..\Programs\Koikatsu Sunshine\BepInEx\plugins\KKSABMX.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\BepInEx\plugins\KKSABMX.dll</HintPath>
     </Reference>
     <Reference Include="KKSAPI">
-      <HintPath>D:\Stored Content\Programs\Koikatsu Sunshine\BepInEx\plugins\KKSAPI.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\BepInEx\plugins\KKSAPI.dll</HintPath>
     </Reference>
     <Reference Include="KKS_Stiletto">
-      <HintPath>..\Programs\Koikatsu Sunshine\BepInEx\plugins\KKS_Stiletto.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\BepInEx\plugins\KKS_Stiletto.dll</HintPath>
     </Reference>
     <Reference Include="Timeline">
-      <HintPath>..\Programs\Koikatsu Sunshine\BepInEx\plugins\Timeline.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\BepInEx\plugins\Timeline.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>D:\Stored Content\Programs\Koikatsu Sunshine\CharaStudio_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\CharaStudio_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="BepInEx">
-      <HintPath>D:\Stored Content\Programs\Koikatsu Sunshine\BepInEx\core\BepInEx.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>    
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.AnimationModule">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\mscorlib.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\mscorlib.dll</HintPath>
     </Reference>
     <Reference Include="UniRx">
-      <HintPath>..\Programs\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UniRx.dll</HintPath>
+      <HintPath>F:\Stored Content\Koikatsu Sunshine\KoikatsuSunshine_Data\Managed\UniRx.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
