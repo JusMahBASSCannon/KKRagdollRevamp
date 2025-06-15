@@ -71,6 +71,8 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
     public static ConfigEntry<float> CDRotationSpeed { get; private set; }
 
+    public static ConfigEntry<float> CDRotationDuration { get; private set; }
+
     public static ConfigEntry<bool> AutoLockCamera { get; private set; }
 
     public static ConfigEntry<bool> ExplodeToggle { get; private set; }
@@ -145,11 +147,13 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
         ThrowDistance = base.Config.Bind("Click and Drag", "Push/Pull Strength", 0.2f, new ConfigDescription("How far the ragdoll gets pushed/pulled between scroll wheel clicks.", new AcceptableValueRange<float>(0.1f, 3f), new ConfigurationManagerAttributes { Order = 8 }));
 
-        CDRotationSpeed = base.Config.Bind("Click and Drag", "Mid-Air Rotation Speed", 50f, new ConfigDescription("How fast the ragdoll will rotate while holding down E during a click and drag of a ragdoll. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", new AcceptableValueRange<float>(0.1f, 3f), new ConfigurationManagerAttributes { Order = 9, IsAdvanced = true }));
+        CDRotationSpeed = base.Config.Bind("Click and Drag", "Mid-Air Rotation Speed", 50f, new ConfigDescription("How fast the ragdoll will rotate while holding down E during a click and drag of a ragdoll. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", new AcceptableValueRange<float>(0.1f, 1000f), new ConfigurationManagerAttributes { Order = 9, IsAdvanced = true }));
 
-        RotateinPlaceWIP = base.Config.Bind("Click and Drag", "Toggle Rotate in Place (UNFINISHED)", defaultValue: false, new ConfigDescription("Enable or disable holding down a key to rotate a part of the ragdoll in place. !!WARNING!! THIS DOESN'T QUITE WORK YET!!!!", null, new ConfigurationManagerAttributes { Order = 10, IsAdvanced = true }));
+        CDRotationDuration = base.Config.Bind("Click and Drag", "Mid-Air Rotation Duration", 10f, new ConfigDescription("How fast the ragdoll will rotate while holding down E during a click and drag of a ragdoll. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", new AcceptableValueRange<float>(0.1f, 20f), new ConfigurationManagerAttributes { Order = 10, IsAdvanced = true }));
 
-        RotateinPlaceShortcut = base.Config.Bind("Click and Drag", "Rotate in Place Hold Shortcut", new KeyboardShortcut(KeyCode.E), new ConfigDescription("The key that must be held down to start rotating in place. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", null, new ConfigurationManagerAttributes { Order = 11, IsAdvanced = true }));
+        RotateinPlaceWIP = base.Config.Bind("Click and Drag", "Toggle Rotate in Place (UNFINISHED)", defaultValue: false, new ConfigDescription("Enable or disable holding down a key to rotate a part of the ragdoll in place. !!WARNING!! THIS DOESN'T QUITE WORK YET!!!!", null, new ConfigurationManagerAttributes { Order = 11, IsAdvanced = true }));
+
+        RotateinPlaceShortcut = base.Config.Bind("Click and Drag", "Rotate in Place Hold Shortcut", new KeyboardShortcut(KeyCode.E), new ConfigDescription("The key that must be held down to start rotating in place. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", null, new ConfigurationManagerAttributes { Order = 12, IsAdvanced = true }));
 
         ExplodeToggle = base.Config.Bind("Explode", "Explode Toggle", defaultValue: true, new ConfigDescription("Enable or disable the explosion feature, originating at the cursor.", null, new ConfigurationManagerAttributes { Order = 1 }));
 
@@ -169,11 +173,11 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
         TwitchMinForce = base.Config.Bind("Twitching", "Minimum Possible Force", 200, new ConfigDescription("The weakest the twitches can be on a bodypart.", new AcceptableValueRange<int>(1, 2000), new ConfigurationManagerAttributes { Order = 4 }));
 
-        TwitchMaxForce = base.Config.Bind("Twitching", "Maximum Possible Force", 200, new ConfigDescription("The strongest the twitches can be on a bodypart.", new AcceptableValueRange<int>(1, 2000), new ConfigurationManagerAttributes { Order = 5 }));
+        TwitchMaxForce = base.Config.Bind("Twitching", "Maximum Possible Force", 700, new ConfigDescription("The strongest the twitches can be on a bodypart.", new AcceptableValueRange<int>(1, 2000), new ConfigurationManagerAttributes { Order = 5 }));
 
         TwitchMinDelay = base.Config.Bind("Twitching", "Shortest Possible Delay", 0.1f, new ConfigDescription("The shortest amount of time in seconds to wait before the next twitch.", new AcceptableValueRange<float>(0.1f, 60f), new ConfigurationManagerAttributes { Order = 6 }));
 
-        TwitchMaxDelay = base.Config.Bind("Twitching", "Longest Possible Delay", 0.1f, new ConfigDescription("The longest amount of time in seconds to wait before the next twitch.", new AcceptableValueRange<float>(0.1f, 60f), new ConfigurationManagerAttributes { Order = 7 }));
+        TwitchMaxDelay = base.Config.Bind("Twitching", "Longest Possible Delay", 2f, new ConfigDescription("The longest amount of time in seconds to wait before the next twitch.", new AcceptableValueRange<float>(0.1f, 60f), new ConfigurationManagerAttributes { Order = 7 }));
 
         TwitchDuration = base.Config.Bind("Twitching", "Duration", 20, new ConfigDescription("The amount of time in seconds the twitches last.", new AcceptableValueRange<int>(1, 120), new ConfigurationManagerAttributes { Order = 8 }));
     }
@@ -365,24 +369,53 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         var rotationSpeed = CDRotationSpeed.Value;
         var isRotating = false;
         var lockPosition = new Vector3();
+        var connectedRB = m_SpringJoint.connectedBody;
         while (Input.GetMouseButton(0))
         {
             var ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-            if ((RotateinPlaceShortcut.Value.IsPressed()) || (RotateinPlaceWIP.Value))
+            if ((RotateinPlaceShortcut.Value.IsPressed()) && (RotateinPlaceWIP.Value))
             {
-                var connectedRB = m_SpringJoint.connectedBody;
                 if (!isRotating)
                 {
                     GetCursorPos(out RotationLockPOS);
                     Cursor.visible = false;
-                    lockPosition = m_SpringJoint.transform.position;
+
+                    // Disable gravity to stop falling
+                    connectedRB.useGravity = false;
+
+                    // Initialize smoothed rotation target
+                    var currentTargetRotation = connectedRB.rotation;
+
+                    // Freeze rotation so only manual rotation is applied
+                    connectedRB.constraints = RigidbodyConstraints.FreezeRotation;
+
+                    isRotating = true;
                 }
-                m_SpringJoint.transform.position = lockPosition;
+                //m_SpringJoint.transform.position = lockPosition;
 
-                //TODO: Make this work better
-                connectedRB.angularVelocity += new Vector3(Input.GetAxis("Mouse Y"), Input.GetAxis("Mouse X"), 0f) * rotationSpeed;
+                // Get mouse movement
+                float mouseX = Input.GetAxis("Mouse X");
+                float mouseY = Input.GetAxis("Mouse Y");
 
-                isRotating = true;
+                // Use camera orientation to determine rotation axes
+                Vector3 camForward = mainCamera.transform.forward;
+                Vector3 camRight = mainCamera.transform.right;
+                Vector3 camUp = mainCamera.transform.up;
+
+                // Choose axis of rotation — for example:
+                // mouseX rotates around world Y (yaw), mouseY around camera's right (pitch)
+                Quaternion yawRotation = Quaternion.AngleAxis(mouseX * rotationSpeed, camUp);
+                Quaternion pitchRotation = Quaternion.AngleAxis(-mouseY * rotationSpeed, camRight);
+
+                // Combine rotations
+                Quaternion rotationDelta = yawRotation * pitchRotation;
+
+                // Accumulate target rotation
+                currentTargetRotation = rotationDelta * currentTargetRotation;
+
+                // Smoothly rotate toward the accumulated target
+                connectedRB.MoveRotation(Quaternion.Slerp(connectedRB.rotation, currentTargetRotation, Time.deltaTime * CDRotationDuration.Value));
+
             }
             else
             {
@@ -390,6 +423,9 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                 {
                     SetCursorPos(RotationLockPOS.X, RotationLockPOS.Y);
                     Cursor.visible = true;
+                    connectedRB.useGravity = true;
+                    connectedRB.constraints = RigidbodyConstraints.None;
+                    isRotating = false;
                 }
                 m_SpringJoint.transform.position = (ray.GetPoint(distance) + distanceModifier);
                 if (Input.GetAxis("Mouse ScrollWheel") > 0f)
@@ -400,7 +436,6 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                 {
                     distanceModifier = distanceModifier - mainCamera.transform.forward * ThrowDistance.Value;
                 }
-                isRotating = false;
             }
             if (Input.GetMouseButton(1)) { break; }
             yield return null;
@@ -410,7 +445,8 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         {
             SetCursorPos(RotationLockPOS.X, RotationLockPOS.Y);
             Cursor.visible = true;
-            m_SpringJoint.connectedBody.constraints = RigidbodyConstraints.None;
+            connectedRB.useGravity = true;
+            connectedRB.constraints = RigidbodyConstraints.None;
         }
         if (m_SpringJoint.connectedBody)
         {
