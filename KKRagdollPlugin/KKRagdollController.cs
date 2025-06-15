@@ -347,6 +347,7 @@ public class KKRagdollController : CharaCustomFunctionController
 				base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>().enabled = false;
             }
 			isRagdoll = true;
+			if (TwitchToggle.Value) { TwitchSimExec(false); }
 			return;
 		}
 		foreach (BoneInfo bone2 in bones)
@@ -955,4 +956,106 @@ public class KKRagdollController : CharaCustomFunctionController
 		SphereCollider sphereCollider5 = benis05.gameObject.AddComponent<SphereCollider>();
 		sphereCollider5.radius = num;
 	}
+
+	private bool isTwitching = false;
+
+    private List<BoneInfo> twitchBones = new List<BoneInfo>();
+
+	/* private int twitchForceMin = 500;
+
+	private int twitchForceMax = 1000;
+
+	private float loopingTime = 20f; // The duration of the loop in seconds.
+
+	private float startDelay = 5f;
+
+    private float delayMin = 0.5f;
+    
+	private float delayMax = 2f; */
+
+    private bool TwitchSimPrep()
+	{
+		UnityEngine.Debug.Log("HIT TWITCHSIMPREP FOR " + base.ChaControl.fileParam.fullname);
+		foreach (BoneInfo bone in bones) 
+		{
+			if ((bone.name.Contains("Right")) || (bone.name.Contains("Left")))
+			{
+				twitchBones.Add(bone);
+				UnityEngine.Debug.Log("ADDED TO TABLE: " + bone.name);
+			}
+		}
+		return true;
+	}
+
+	public void TwitchSimExec(bool manual)
+	{
+		UnityEngine.Debug.Log("FIRED TWITCHSIMEXEC ON " + base.ChaControl.fileParam.fullname);
+		if (TwitchToggle.Value)
+		{
+            if (!isTwitching && isRagdoll && TwitchSimPrep())
+			{
+				UnityEngine.Debug.Log("EVERYTHING IS TRUE! " + base.ChaControl.fileParam.fullname);
+				StartCoroutine(TwitchSim(manual));
+			}
+		}
+	}
+
+	private int NegativeRandomizer(int num)
+	{
+		int coinToss = rnd.Next(0, 2);
+		if (coinToss == 0)
+		{
+			return -num;
+		}
+		return num;
+	}
+
+    private IEnumerator TwitchSim(bool manual)
+    {
+		isTwitching = true;
+		if (!manual)
+		{
+			UnityEngine.Debug.Log("Seconds told to wait: " + TwitchStartDelay.Value + base.ChaControl.fileParam.fullname);
+			yield return new WaitForSeconds(TwitchStartDelay.Value);
+		}
+        UnityEngine.Debug.Log("TWITCH START! " + base.ChaControl.fileParam.fullname);
+
+        float startTime = Time.time;
+        float endTime = startTime + TwitchDuration.Value;
+
+		// Loop  for given duration
+		/* do
+		{
+			var selectedBone = twitchBones[rnd.Next(twitchBones.Count)];
+			var selectedRigid = selectedBone.anchor.GetComponent<Rigidbody>();
+			float xRandom = rnd.Next(twitchForceMin, twitchForceMax);
+			float yRandom = rnd.Next(twitchForceMin, twitchForceMax);
+			float zRandom = rnd.Next(twitchForceMin, twitchForceMax);
+			selectedRigid.AddForce(new Vector3(xRandom, yRandom, zRandom));
+            UnityEngine.Debug.Log("TWITCH!" + base.ChaControl.fileParam.fullname + ": x:" + xRandom + " y:" + yRandom + " z:" + zRandom + " on body part '" + selectedBone.name + "'");
+            yield return new WaitForSeconds(UnityEngine.Random.Range(delayMin, delayMax));
+		}	*/	
+		do
+		{
+			var groupSize = rnd.Next(1, 5);
+			int i = 1;
+			while (i <= groupSize)
+			{
+				var selectedBone = twitchBones[rnd.Next(twitchBones.Count)];
+				var selectedRigid = selectedBone.anchor.GetComponent<Rigidbody>();
+				float xRandom = NegativeRandomizer(rnd.Next(TwitchMinForce.Value, TwitchMaxForce.Value + 1));
+				float yRandom = NegativeRandomizer(rnd.Next(TwitchMinForce.Value, TwitchMaxForce.Value + 1));
+                float zRandom = NegativeRandomizer(rnd.Next(TwitchMinForce.Value, TwitchMaxForce.Value + 1));
+				selectedRigid.AddForce(new Vector3(xRandom, yRandom, zRandom));
+				UnityEngine.Debug.Log("TWITCH!" + base.ChaControl.fileParam.fullname + ": x:" + xRandom + " y:" + yRandom + " z:" + zRandom + " on body part '" + selectedBone.name + "' - Bone " + i + " of " + groupSize + ".");
+				i++;
+			}
+            yield return new WaitForSeconds(UnityEngine.Random.Range(TwitchMinDelay.Value, TwitchMaxDelay.Value));
+		}
+		while (Time.time < endTime);
+		//Reset Vars
+        isTwitching = false;
+		UnityEngine.Debug.Log("REACHED END OF TWITCH LOOP " + base.ChaControl.fileParam.fullname);
+    }
+
 }

@@ -23,7 +23,7 @@ using BepInEx.Bootstrap;
 namespace KKRagdollPlugin;
 
 #if KK
-[BepInPlugin("jusmahbasscannon.KKRagdollRevamp", "KKRagdollRevamp", "0.5.3")]
+[BepInPlugin("jusmahbasscannon.KKRagdollRevamp", "KKRagdollRevamp", "0.5.4")]
 #elif KKS
 [BepInPlugin("jusmahbasscannon.KKSRagdollRevamp", "KKSRagdollRevamp", "0.5.3")]
 #endif
@@ -87,6 +87,22 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
     public static ConfigEntry<bool> CollidersFix { get; private set; }
 
+    public static ConfigEntry<bool> TwitchToggle { get; private set; }
+
+    public static ConfigEntry<float> TwitchStartDelay { get; private set; }
+
+    public static ConfigEntry<int> TwitchMinForce { get; private set; }
+
+    public static ConfigEntry<int> TwitchMaxForce { get; private set; }
+
+    public static ConfigEntry<float> TwitchMinDelay { get; private set; }
+
+    public static ConfigEntry<float> TwitchMaxDelay { get; private set; }
+
+    public static ConfigEntry<int> TwitchDuration { get; private set; }
+
+    public static ConfigEntry<KeyboardShortcut> TwitchManualHotkey { get; private set; }
+
     const bool k_AttachToCenterOfMass = false;
 
     private SpringJoint m_SpringJoint;
@@ -144,6 +160,22 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         ExplodePower = base.Config.Bind("Explode", "Power", 5f, new ConfigDescription("The strength of the explosion.", new AcceptableValueRange<float>(0.1f, 1000f), new ConfigurationManagerAttributes { Order = 4 }));
 
         ExplodeUpwardsForce = base.Config.Bind("Explode", "Upwards Force", 5f, new ConfigDescription("How much the explosion pushes the ragdoll upwards.", new AcceptableValueRange<float>(0.1f, 1000f), new ConfigurationManagerAttributes { Order = 5 }));
+
+        TwitchToggle = base.Config.Bind("Twitching", "Twitching Toggle", defaultValue: true, new ConfigDescription("Enable or disable post-ragdoll twitching, simulating death spasms. Good for extra flair in combat Timeline animations!", null, new ConfigurationManagerAttributes { Order = 1 }));
+
+        TwitchManualHotkey = base.Config.Bind("Twitching", "Keyboard Shortcut", new KeyboardShortcut(KeyCode.T), new ConfigDescription("Tap a button on your keyboard to instantly start ragdoll twitching.", null, new ConfigurationManagerAttributes { Order = 2 }));
+
+        TwitchStartDelay = base.Config.Bind("Twitching", "Start Delay", 5f, new ConfigDescription("The amount of seconds to wait after ragdoll activation before twitching begins. This is ignored when using the hotkey.", new AcceptableValueRange<float>(0.1f, 60f), new ConfigurationManagerAttributes { Order = 3 }));
+
+        TwitchMinForce = base.Config.Bind("Twitching", "Minimum Possible Force", 200, new ConfigDescription("The weakest the twitches can be on a bodypart.", new AcceptableValueRange<int>(1, 2000), new ConfigurationManagerAttributes { Order = 4 }));
+
+        TwitchMaxForce = base.Config.Bind("Twitching", "Maximum Possible Force", 200, new ConfigDescription("The strongest the twitches can be on a bodypart.", new AcceptableValueRange<int>(1, 2000), new ConfigurationManagerAttributes { Order = 5 }));
+
+        TwitchMinDelay = base.Config.Bind("Twitching", "Shortest Possible Delay", 0.1f, new ConfigDescription("The shortest amount of time in seconds to wait before the next twitch.", new AcceptableValueRange<float>(0.1f, 60f), new ConfigurationManagerAttributes { Order = 6 }));
+
+        TwitchMaxDelay = base.Config.Bind("Twitching", "Longest Possible Delay", 0.1f, new ConfigDescription("The longest amount of time in seconds to wait before the next twitch.", new AcceptableValueRange<float>(0.1f, 60f), new ConfigurationManagerAttributes { Order = 7 }));
+
+        TwitchDuration = base.Config.Bind("Twitching", "Duration", 20, new ConfigDescription("The amount of time in seconds the twitches last.", new AcceptableValueRange<int>(1, 120), new ConfigurationManagerAttributes { Order = 8 }));
     }
 
     Dictionary<string, BepInEx.PluginInfo> activePlugins = new Dictionary<string, BepInEx.PluginInfo>();
@@ -219,6 +251,15 @@ public class KKRagdollRevampBase : BaseUnityPlugin
             {
                 currentChaControl = item.GetChaControl();
                 currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().fireRagdoll = !currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().fireRagdoll;
+            }
+        }
+        if (TwitchManualHotkey.Value.IsDown())
+        {
+            IEnumerable<OCIChar> selectedCharacters = StudioAPI.GetSelectedCharacters();
+            foreach (OCIChar item in selectedCharacters)
+            {
+                currentChaControl = item.GetChaControl();
+                currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().TwitchSimExec(true);
             }
         }
 
