@@ -242,12 +242,42 @@ public class KKRagdollController : CharaCustomFunctionController
 		StartCoroutine(DelayedInitiate(2f));
 	}
 
-	protected override void Update()
+    public float velocityThreshold = 0.05f;   // speed under which we consider the rb "still"
+   
+	public float stillTimeRequired = 5f;      // seconds required before sleep
+
+    private float stillTimer = 0f;
+
+    protected override void Update()
 	{
 		if (ActivateRagdollAll.Value.IsDown())
 		{
 			fireRagdoll = !fireRagdoll;
 		}
+
+		if (isRagdoll && Sleep.Value)
+		{
+			foreach(BoneInfo bone in bones)
+			{
+                Rigidbody currentRB = bone.anchor.GetComponent<Rigidbody>();
+				if (currentRB.velocity.magnitude < velocityThreshold)
+                {
+                    stillTimer += Time.deltaTime;
+
+                    // If we've been still long enough, sleep
+                    if (stillTimer >= stillTimeRequired)
+                    {
+                        currentRB.Sleep();
+                    }
+                }
+                else
+                {
+                    // Reset timer if object starts moving again
+                    stillTimer = 0f;
+                }
+            }
+		}
+
 		base.Update();
 	}
 

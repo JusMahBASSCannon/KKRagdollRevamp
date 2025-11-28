@@ -55,6 +55,8 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
     public static ConfigEntry<bool> ToggleKKABMX { get; private set; }
 
+    public static ConfigEntry<bool> Sleep { get; private set; }
+
     public static ConfigEntry<bool> ClickDragToggle { get; private set; }
 
     public static ConfigEntry<float> k_Spring { get; private set; }
@@ -124,6 +126,8 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         ActivateRagdollAll = base.Config.Bind("Keyboard Shortcuts", "Activate All Ragdolls", new KeyboardShortcut(KeyCode.F10), new ConfigDescription("Activates ragdolls for all characters in the scene.", null));
 
         AutoIKToggle = base.Config.Bind("Experimental", "Auto Toggle IK", defaultValue: false, new ConfigDescription("Automatically release IK's grip on the model when activating the ragdoll. WARNING: Could cause unexpected glitches!", null, new ConfigurationManagerAttributes { IsAdvanced = true }));
+
+        Sleep = base.Config.Bind("Experimental", "Sleep", defaultValue: true, new ConfigDescription("Sleeps the ragdoll if there is no movement after a set amount of time.", null, new ConfigurationManagerAttributes { IsAdvanced = true }));
 
         ToggleKKABMX = base.Config.Bind("Debug", "Auto Disable KKABMX", defaultValue: true, new ConfigDescription("Automatically disables KKABMX when in ragdoll mode to fix gliding ragdolls. WARNING: Will cause physics issues with ragdolls, but might fix character distortion!", null, new ConfigurationManagerAttributes { IsAdvanced = true }));
 
@@ -328,6 +332,24 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                 continue;
             }
 
+            if (nailList.Count > 0)
+            {
+                foreach (GameObject nail in nailList)
+                {
+                    UnityEngine.Debug.Log("current: " + nail.name);
+                    UnityEngine.Debug.Log("current fixed joint connection: " + nail.GetComponent<FixedJoint>().connectedBody.gameObject.name);
+                    UnityEngine.Debug.Log("current accepted hit: " + hit + ", " + hit.rigidbody.gameObject.name);
+                    UnityEngine.Debug.Log(nail.GetComponent<FixedJoint>().connectedBody + " compared to " + hit.rigidbody);
+                    if (nail.GetComponent<FixedJoint>().connectedBody == hit.rigidbody)
+                    {
+                        UnityEngine.Debug.Log("PASSED IF CHECK");
+                        nailList.Remove(nail);
+                        Destroy(nail);
+                        break;
+                    }
+                }
+            }
+
             if (!m_SpringJoint)
             {
                 var go = new GameObject("Rigidbody dragger");
@@ -357,6 +379,8 @@ public class KKRagdollRevampBase : BaseUnityPlugin
     private static extern bool GetCursorPos(out GameCursor.POINT lpPoint);
 
 
+ private List<GameObject> nailList = new List<GameObject>();
+    
     private IEnumerator DragObject(float distance)
     {
         var oldDrag = m_SpringJoint.connectedBody.drag;
@@ -375,6 +399,7 @@ public class KKRagdollRevampBase : BaseUnityPlugin
             var ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if ((RotateinPlaceShortcut.Value.IsPressed()) && (RotateinPlaceWIP.Value))
             {
+                /* Quaternion currentTargetRotation;
                 if (!isRotating)
                 {
                     GetCursorPos(out RotationLockPOS);
@@ -384,7 +409,7 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                     connectedRB.useGravity = false;
 
                     // Initialize smoothed rotation target
-                    var currentTargetRotation = connectedRB.rotation;
+                    currentTargetRotation = connectedRB.rotation;
 
                     // Freeze rotation so only manual rotation is applied
                     connectedRB.constraints = RigidbodyConstraints.FreezeRotation;
@@ -414,7 +439,7 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                 currentTargetRotation = rotationDelta * currentTargetRotation;
 
                 // Smoothly rotate toward the accumulated target
-                connectedRB.MoveRotation(Quaternion.Slerp(connectedRB.rotation, currentTargetRotation, Time.deltaTime * CDRotationDuration.Value));
+                connectedRB.MoveRotation(Quaternion.Slerp(connectedRB.rotation, currentTargetRotation, Time.deltaTime * CDRotationDuration.Value)); */
 
             }
             else
@@ -437,7 +462,30 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                     distanceModifier = distanceModifier - mainCamera.transform.forward * ThrowDistance.Value;
                 }
             }
-            if (Input.GetMouseButton(1)) { break; }
+            if (Input.GetMouseButton(1)) {
+                var error = false;
+                if (nailList.Count > 0)
+                {
+                    foreach (GameObject existingNail in nailList)
+                    {
+                        if (existingNail.GetComponent<FixedJoint>().connectedBody == connectedRB)
+                        {
+                            error = true;
+                            break;
+                        }
+                    }
+                }
+                if (error) { break; }
+                var nail = new GameObject(connectedRB.GetComponentInParent<ChaControl>().fileParam.fullname + "-" + connectedRB.gameObject.name + "-" + Time.deltaTime + "-RagdollFreezer");
+                var nailBody = nail.AddComponent<Rigidbody>();
+                var nailJoint = nail.AddComponent<FixedJoint>();
+                nailBody.isKinematic = true;
+                nailJoint.transform.position = connectedRB.transform.position;
+                nailJoint.anchor = Vector3.zero;
+                nailJoint.connectedBody = connectedRB;
+                nailList.Add(nail);
+                break;
+            }
             yield return null;
         }
         if (AutoLockCamera.Value) { mainCamera.GetComponent<Studio.CameraControl>().enabled = true; }
