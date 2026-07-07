@@ -19,6 +19,7 @@ using Timeline;
 using System.Xml;
 using BepInEx.Logging;
 using BepInEx.Bootstrap;
+using System.Linq;
 
 namespace KKRagdollPlugin;
 
@@ -34,8 +35,6 @@ public class KKRagdollRevampBase : BaseUnityPlugin
     private bool ragdollUiActive = false;
 
     private Rect windowRect = new Rect(500f, 40f, 240f, 170f);
-
-    private ChaControl currentChaControl = null;
 
     public bool ragdollsOn = false;
 
@@ -58,6 +57,8 @@ public class KKRagdollRevampBase : BaseUnityPlugin
     public static ConfigEntry<bool> Sleep { get; private set; }
 
     public static ConfigEntry<bool> ClickDragToggle { get; private set; }
+
+    public static ConfigEntry<bool> RightClickFreezeToggle { get; private set; }
 
     public static ConfigEntry<float> k_Spring { get; private set; }
 
@@ -107,6 +108,12 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
     public static ConfigEntry<KeyboardShortcut> TwitchManualHotkey { get; private set; }
 
+    public static ConfigEntry<KeyboardShortcut> ReleaseFreezes { get; private set; }
+
+    public static ConfigEntry<float> SleepTime { get; private set; }
+
+    public static ConfigEntry<float> SleepVelocity { get; private set; }
+
     const bool k_AttachToCenterOfMass = false;
 
     private SpringJoint m_SpringJoint;
@@ -127,7 +134,11 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
         AutoIKToggle = base.Config.Bind("Experimental", "Auto Toggle IK", defaultValue: false, new ConfigDescription("Automatically release IK's grip on the model when activating the ragdoll. WARNING: Could cause unexpected glitches!", null, new ConfigurationManagerAttributes { IsAdvanced = true }));
 
-        Sleep = base.Config.Bind("Experimental", "Sleep", defaultValue: true, new ConfigDescription("Sleeps the ragdoll if there is no movement after a set amount of time.", null, new ConfigurationManagerAttributes { IsAdvanced = true }));
+        Sleep = base.Config.Bind("Sleep", "Enable Sleep", defaultValue: true, new ConfigDescription("Sleeps the ragdoll if there is no movement after a set amount of time.", null, new ConfigurationManagerAttributes { Order = 1 }));
+        
+        SleepTime = base.Config.Bind("Sleep", "Sleep Timeframe", 5f, new ConfigDescription("The amount of time the ragdoll's velocity must be under the 'Sleep Velocity' value before sleeping in seconds.", new AcceptableValueRange<float>(0f, 60f), new ConfigurationManagerAttributes { Order = 2 }));
+
+        SleepVelocity = base.Config.Bind("Sleep", "Sleep Velocity", 0.05f, new ConfigDescription("The maximum velocity threshold. If the ragdoll is under this velocity value for the amount of time set in 'Sleep Timeframe', the ragdoll will sleep.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = 3 }));
 
         ToggleKKABMX = base.Config.Bind("Debug", "Auto Disable KKABMX", defaultValue: true, new ConfigDescription("Automatically disables KKABMX when in ragdoll mode to fix gliding ragdolls. WARNING: Will cause physics issues with ragdolls, but might fix character distortion!", null, new ConfigurationManagerAttributes { IsAdvanced = true }));
 
@@ -137,27 +148,31 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
         ClickDragToggle = base.Config.Bind("Click and Drag", "Toggle Click and Drag", defaultValue: true, new ConfigDescription("Enable or disable click and drag functionality for the ragdolls.", null, new ConfigurationManagerAttributes { Order = 1 }));
 
-        AutoLockCamera = base.Config.Bind("Click and Drag", "Auto Lock Camera", defaultValue: true, new ConfigDescription("Automatically lock the camera when dragging a ragdoll. !!This should always be on unless you have a plan!!", null, new ConfigurationManagerAttributes { Order = 2 }));
+        RightClickFreezeToggle = base.Config.Bind("Click and Drag", "Toggle Right Click Freeze", defaultValue: true, new ConfigDescription("Toggle the ability to freeze the dragged part of the body in place by right clicking during a click and drag.", null, new ConfigurationManagerAttributes { Order = 2 }));
 
-        k_Spring = base.Config.Bind("Click and Drag", "Spring", 2000f, new ConfigDescription("The strength of the drag. This should be pretty high for best results.", new AcceptableValueRange<float>(300f, 2000f), new ConfigurationManagerAttributes { Order = 3 }));
+        AutoLockCamera = base.Config.Bind("Click and Drag", "Auto Lock Camera", defaultValue: true, new ConfigDescription("Automatically lock the camera when dragging a ragdoll. !!This should always be on unless you have a plan!!", null, new ConfigurationManagerAttributes { Order = 3 }));
 
-        k_Damper = base.Config.Bind("Click and Drag", "Damper", 0.01f, new ConfigDescription("How fast high-speed motion is lost. Low values increase the floppiness, high values increase precision.", new AcceptableValueRange<float>(0.01f, 200f), new ConfigurationManagerAttributes { Order = 4 }));
+        k_Spring = base.Config.Bind("Click and Drag", "Spring", 2000f, new ConfigDescription("The strength of the drag. This should be pretty high for best results.", new AcceptableValueRange<float>(300f, 2000f), new ConfigurationManagerAttributes { Order = 4 }));
 
-        k_Drag = base.Config.Bind("Click and Drag", "Linear Drag", 10f, new ConfigDescription("The max speed of the ragdoll in the air. Low values are recommended.", new AcceptableValueRange<float>(10f, 100f), new ConfigurationManagerAttributes { Order = 5 }));
+        k_Damper = base.Config.Bind("Click and Drag", "Damper", 0.01f, new ConfigDescription("How fast high-speed motion is lost. Low values increase the floppiness, high values increase precision.", new AcceptableValueRange<float>(0.01f, 200f), new ConfigurationManagerAttributes { Order = 5 }));
 
-        k_AngularDrag = base.Config.Bind("Click and Drag", "Angular Drag", 10f, new ConfigDescription("The max speed of rotation for joints of the ragdoll through the air. Low values are recommended.", new AcceptableValueRange<float>(10f, 100f), new ConfigurationManagerAttributes { Order = 6 }));
+        k_Drag = base.Config.Bind("Click and Drag", "Linear Drag", 10f, new ConfigDescription("The max speed of the ragdoll in the air. Low values are recommended.", new AcceptableValueRange<float>(10f, 100f), new ConfigurationManagerAttributes { Order = 6 }));
 
-        k_Distance = base.Config.Bind("Click and Drag", "Distance", 0.01f, new ConfigDescription("How far away the cursor is from the ragdoll before it starts being dragged. For best results, put this slider to as low as it can go!", new AcceptableValueRange<float>(0.01f, 1f), new ConfigurationManagerAttributes { Order = 7 }));
+        k_AngularDrag = base.Config.Bind("Click and Drag", "Angular Drag", 10f, new ConfigDescription("The max speed of rotation for joints of the ragdoll through the air. Low values are recommended.", new AcceptableValueRange<float>(10f, 100f), new ConfigurationManagerAttributes { Order = 7 }));
 
-        ThrowDistance = base.Config.Bind("Click and Drag", "Push/Pull Strength", 0.2f, new ConfigDescription("How far the ragdoll gets pushed/pulled between scroll wheel clicks.", new AcceptableValueRange<float>(0.1f, 3f), new ConfigurationManagerAttributes { Order = 8 }));
+        k_Distance = base.Config.Bind("Click and Drag", "Distance", 0.01f, new ConfigDescription("How far away the cursor is from the ragdoll before it starts being dragged. For best results, put this slider to as low as it can go!", new AcceptableValueRange<float>(0.01f, 1f), new ConfigurationManagerAttributes { Order = 8 }));
 
-        CDRotationSpeed = base.Config.Bind("Click and Drag", "Mid-Air Rotation Speed", 50f, new ConfigDescription("How fast the ragdoll will rotate while holding down E during a click and drag of a ragdoll. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", new AcceptableValueRange<float>(0.1f, 1000f), new ConfigurationManagerAttributes { Order = 9, IsAdvanced = true }));
+        ThrowDistance = base.Config.Bind("Click and Drag", "Push/Pull Strength", 0.2f, new ConfigDescription("How far the ragdoll gets pushed/pulled between scroll wheel clicks.", new AcceptableValueRange<float>(0.1f, 3f), new ConfigurationManagerAttributes { Order = 9 }));
 
-        CDRotationDuration = base.Config.Bind("Click and Drag", "Mid-Air Rotation Duration", 10f, new ConfigDescription("How fast the ragdoll will rotate while holding down E during a click and drag of a ragdoll. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", new AcceptableValueRange<float>(0.1f, 20f), new ConfigurationManagerAttributes { Order = 10, IsAdvanced = true }));
+        CDRotationSpeed = base.Config.Bind("Click and Drag", "Mid-Air Rotation Speed", 50f, new ConfigDescription("How fast the ragdoll will rotate while holding down E during a click and drag of a ragdoll. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", new AcceptableValueRange<float>(0.1f, 1000f), new ConfigurationManagerAttributes { Order = 10, IsAdvanced = true }));
 
-        RotateinPlaceWIP = base.Config.Bind("Click and Drag", "Toggle Rotate in Place (UNFINISHED)", defaultValue: false, new ConfigDescription("Enable or disable holding down a key to rotate a part of the ragdoll in place. !!WARNING!! THIS DOESN'T QUITE WORK YET!!!!", null, new ConfigurationManagerAttributes { Order = 11, IsAdvanced = true }));
+        CDRotationDuration = base.Config.Bind("Click and Drag", "Mid-Air Rotation Duration", 10f, new ConfigDescription("How fast the ragdoll will rotate while holding down E during a click and drag of a ragdoll. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", new AcceptableValueRange<float>(0.1f, 20f), new ConfigurationManagerAttributes { Order = 11, IsAdvanced = true }));
 
-        RotateinPlaceShortcut = base.Config.Bind("Click and Drag", "Rotate in Place Hold Shortcut", new KeyboardShortcut(KeyCode.E), new ConfigDescription("The key that must be held down to start rotating in place. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", null, new ConfigurationManagerAttributes { Order = 12, IsAdvanced = true }));
+        RotateinPlaceWIP = base.Config.Bind("Click and Drag", "Toggle Rotate in Place (UNFINISHED)", defaultValue: false, new ConfigDescription("Enable or disable holding down a key to rotate a part of the ragdoll in place. !!WARNING!! THIS DOESN'T QUITE WORK YET!!!!", null, new ConfigurationManagerAttributes { Order = 12, IsAdvanced = true }));
+
+        RotateinPlaceShortcut = base.Config.Bind("Click and Drag", "Rotate in Place Hold Shortcut", new KeyboardShortcut(KeyCode.E), new ConfigDescription("The key that must be held down to start rotating in place. !!WARNING!! THIS IS PART OF A WIP FEATURESET!!", null, new ConfigurationManagerAttributes { Order = 13, IsAdvanced = true }));
+
+        ReleaseFreezes = base.Config.Bind("Click and Drag", "Unfreeze", new KeyboardShortcut(KeyCode.R), new ConfigDescription("Single tap this hotkey to unfreeze the ragdoll selected in the workspace, double tap to unfreeze all ragdolls.", null, new ConfigurationManagerAttributes { Order = 14 }));
 
         ExplodeToggle = base.Config.Bind("Explode", "Explode Toggle", defaultValue: true, new ConfigDescription("Enable or disable the explosion feature, originating at the cursor.", null, new ConfigurationManagerAttributes { Order = 1 }));
 
@@ -248,6 +263,10 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         return null;
     }
 
+    float delayBetweenPresses = 0.25f;
+    bool pressedFirstTime = false;
+    float lastPressedTime;
+
     private void Update()
     {
         InitializeDrag();
@@ -257,16 +276,17 @@ public class KKRagdollRevampBase : BaseUnityPlugin
             IEnumerable<OCIChar> selectedCharacters = StudioAPI.GetSelectedCharacters();
             foreach (OCIChar item in selectedCharacters)
             {
-                currentChaControl = item.GetChaControl();
+                ChaControl currentChaControl = item.GetChaControl();
                 currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().fireRagdoll = !currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().fireRagdoll;
             }
         }
+
         if (TwitchManualHotkey.Value.IsDown())
         {
             IEnumerable<OCIChar> selectedCharacters = StudioAPI.GetSelectedCharacters();
             foreach (OCIChar item in selectedCharacters)
             {
-                currentChaControl = item.GetChaControl();
+                ChaControl currentChaControl = item.GetChaControl();
                 currentChaControl.gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>().TwitchSimExec(true);
             }
         }
@@ -274,6 +294,84 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         if ((ExplodeShortcut.Value.IsDown()) && (ExplodeToggle.Value))
         {
             Explosion();
+        }
+
+        if (ClickDragToggle.Value)
+        {
+            if (ReleaseFreezes.Value.IsDown())
+            {
+                if (pressedFirstTime) // we've already pressed the button a first time, we check if the 2nd time is fast enough to be considered a double-press
+                {
+                    bool isDoublePress = Time.time - lastPressedTime <= delayBetweenPresses;
+
+                    if (isDoublePress)
+                    {
+                        Unfreeze(true);
+                        pressedFirstTime = false;
+                    }
+                }
+                else // we've not already pressed the button a first time
+                {
+                    pressedFirstTime = true; // we tell this is the first time
+                }
+
+                lastPressedTime = Time.time;
+            }
+
+            if (pressedFirstTime && Time.time - lastPressedTime > delayBetweenPresses) // we're waiting for a 2nd key press but we've reached the delay, we can't consider it a double press anymore
+            {
+                // note that by checking first for pressedFirstTime in the condition above, we make the program skip the next part of the condition if it's not true,
+                // thus we're avoiding the "heavy computation" (the substraction and comparison) most of the time.
+                // we're also making sure we've pressed the key a first time before doing the computation, which avoids doing the computation while lastPressedTime is still uninitialized
+                Unfreeze(false);
+                pressedFirstTime = false;
+            }
+        }
+    }
+
+    internal void UnfreezefromChar(ChaControl requester)
+    {
+        ChaControl currentChaControl = requester;
+        ChaControl comparedChaControl = null;
+        foreach (GameObject nail in nailList.ToList())
+        {
+            comparedChaControl = nail.GetComponent<FixedJoint>().connectedBody.gameObject.GetComponentInParent<ChaControl>();
+            if (currentChaControl == comparedChaControl)
+            {
+                nailList.Remove(nail);
+                Destroy(nail);
+            }
+        }
+    }
+
+
+    private void Unfreeze(bool doubleTap)
+    {
+        if (!doubleTap)
+        {
+            IEnumerable<OCIChar> selectedCharacters = StudioAPI.GetSelectedCharacters();
+            foreach (OCIChar item in selectedCharacters)
+            {
+                ChaControl currentChaControl = item.GetChaControl();
+                ChaControl comparedChaControl = null;
+                foreach (GameObject nail in nailList.ToList())
+                {
+                    comparedChaControl = nail.GetComponent<FixedJoint>().connectedBody.gameObject.GetComponentInParent<ChaControl>();
+                    if (currentChaControl == comparedChaControl)
+                    {
+                        nailList.Remove(nail);
+                        Destroy(nail);
+                    }
+                }
+            }
+        }
+        else
+        {
+            foreach(GameObject nail in nailList.ToList())
+            {
+                nailList.Remove(nail);
+                Destroy(nail);
+            }
         }
     }
 
@@ -334,15 +432,15 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
             if (nailList.Count > 0)
             {
-                foreach (GameObject nail in nailList)
+                foreach (GameObject nail in nailList.ToList())
                 {
-                    UnityEngine.Debug.Log("current: " + nail.name);
-                    UnityEngine.Debug.Log("current fixed joint connection: " + nail.GetComponent<FixedJoint>().connectedBody.gameObject.name);
-                    UnityEngine.Debug.Log("current accepted hit: " + hit + ", " + hit.rigidbody.gameObject.name);
-                    UnityEngine.Debug.Log(nail.GetComponent<FixedJoint>().connectedBody + " compared to " + hit.rigidbody);
+                    //UnityEngine.Debug.Log("current: " + nail.name);
+                    //UnityEngine.Debug.Log("current fixed joint connection: " + nail.GetComponent<FixedJoint>().connectedBody.gameObject.name);
+                    //UnityEngine.Debug.Log("current accepted hit: " + hit + ", " + hit.rigidbody.gameObject.name);
+                    //UnityEngine.Debug.Log(nail.GetComponent<FixedJoint>().connectedBody + " compared to " + hit.rigidbody);
                     if (nail.GetComponent<FixedJoint>().connectedBody == hit.rigidbody)
                     {
-                        UnityEngine.Debug.Log("PASSED IF CHECK");
+                        //UnityEngine.Debug.Log("PASSED IF CHECK");
                         nailList.Remove(nail);
                         Destroy(nail);
                         break;
@@ -379,7 +477,7 @@ public class KKRagdollRevampBase : BaseUnityPlugin
     private static extern bool GetCursorPos(out GameCursor.POINT lpPoint);
 
 
- private List<GameObject> nailList = new List<GameObject>();
+ internal List<GameObject> nailList = new List<GameObject>();
     
     private IEnumerator DragObject(float distance)
     {
@@ -462,7 +560,7 @@ public class KKRagdollRevampBase : BaseUnityPlugin
                     distanceModifier = distanceModifier - mainCamera.transform.forward * ThrowDistance.Value;
                 }
             }
-            if (Input.GetMouseButton(1)) {
+            if (Input.GetMouseButton(1) && RightClickFreezeToggle.Value) {
                 var error = false;
                 if (nailList.Count > 0)
                 {

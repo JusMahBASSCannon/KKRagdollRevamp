@@ -201,7 +201,7 @@ public class KKRagdollController : CharaCustomFunctionController
 	private bool ragdollTransition = false;
 
 	private bool _fireRagdoll;
-	
+
 	public bool fireRagdoll
 	{
 		get
@@ -213,10 +213,13 @@ public class KKRagdollController : CharaCustomFunctionController
 			_fireRagdoll = value;
 			if (!ragdollTransition)
 			{
-				if (value && !isRagdoll) {
+				if (value && !isRagdoll)
+				{
 					StartCoroutine(PrepareRagdoll(true));
 				}
-				if (!value && isRagdoll) {
+				if (!value && isRagdoll)
+				{
+					rBase.UnfreezefromChar(base.ChaControl);
 					StartCoroutine(PrepareRagdoll(false));
 				}
 			}
@@ -227,28 +230,28 @@ public class KKRagdollController : CharaCustomFunctionController
 
 	public KKRagdollRevampBase revampBase;
 
-    protected override void OnCardBeingSaved(GameMode currentGameMode)
+	KKRagdollRevampBase rBase = new KKRagdollRevampBase();
+
+	protected override void OnCardBeingSaved(GameMode currentGameMode)
 	{
 	}
 
 	protected override void OnReload(GameMode currentGameMode)
 	{
-        Physics.sleepThreshold = 1f;
+		Physics.sleepThreshold = 1f;
 
-        if (Time.fixedDeltaTime != 0.005f)
+		if (Time.fixedDeltaTime != 0.005f)
 		{
 			Time.fixedDeltaTime = 0.005f;
 		}
 		StartCoroutine(DelayedInitiate(2f));
 	}
 
-    public float velocityThreshold = 0.05f;   // speed under which we consider the rb "still"
-   
-	public float stillTimeRequired = 5f;      // seconds required before sleep
+	//public float velocityThreshold = 0.05f;   // speed under which we consider the rb "still"
 
-    private float stillTimer = 0f;
+	//public float stillTimeRequired = 5f;      // seconds required before sleep, default 5f
 
-    protected override void Update()
+	protected override void Update()
 	{
 		if (ActivateRagdollAll.Value.IsDown())
 		{
@@ -257,25 +260,26 @@ public class KKRagdollController : CharaCustomFunctionController
 
 		if (isRagdoll && Sleep.Value)
 		{
-			foreach(BoneInfo bone in bones)
+			foreach (BoneInfo bone in bones)
 			{
-                Rigidbody currentRB = bone.anchor.GetComponent<Rigidbody>();
-				if (currentRB.velocity.magnitude < velocityThreshold)
-                {
-                    stillTimer += Time.deltaTime;
+				float stillTimer = 0f;
+				Rigidbody currentRB = bone.anchor.GetComponent<Rigidbody>();
+				if (currentRB.velocity.magnitude < SleepVelocity.Value)
+				{
+					stillTimer += Time.deltaTime;
 
-                    // If we've been still long enough, sleep
-                    if (stillTimer >= stillTimeRequired)
-                    {
-                        currentRB.Sleep();
-                    }
-                }
-                else
-                {
-                    // Reset timer if object starts moving again
-                    stillTimer = 0f;
-                }
-            }
+					// If we've been still long enough, sleep
+					if (stillTimer > SleepTime.Value)
+					{
+						currentRB.Sleep();
+					}
+				}
+				else
+				{
+					// Reset timer if object starts moving again
+					stillTimer = 0f;
+				}
+			}
 		}
 
 		base.Update();
@@ -297,7 +301,7 @@ public class KKRagdollController : CharaCustomFunctionController
 			ready = true;
 			Physics.IgnoreCollision(pelvis.gameObject.GetComponent<Collider>(), leftHips.gameObject.GetComponent<Collider>());
 			Physics.IgnoreCollision(pelvis.gameObject.GetComponent<Collider>(), rightHips.gameObject.GetComponent<Collider>());
-        }
+		}
 	}
 
 	bool fkDebug = false;
@@ -307,19 +311,19 @@ public class KKRagdollController : CharaCustomFunctionController
 	{
 		ragdollTransition = true; //We set a flag to tell Timeline that the ragdoll is in the midst of toggling so it doesn't spam
 		stilettoInstalled = KKRagdollRevampBase.isStiletto;
-        if (launching)
+		if (launching)
 		{
 			if (stilettoInstalled && StilettoFix.Value) { StilettoCompatibility(true); }
 			yield return new WaitForSeconds(ragdollPreloadDelay); //We delay the code so our patches can take effect before ragdolling
 		}
-        ToggleRagdoll();
+		ToggleRagdoll();
 		if (!launching)
 		{
-            yield return new WaitForSeconds(0.1f);
-            if (stilettoInstalled && StilettoFix.Value) { StilettoCompatibility(false); }
-        }
+			yield return new WaitForSeconds(0.1f);
+			if (stilettoInstalled && StilettoFix.Value) { StilettoCompatibility(false); }
+		}
 		ragdollTransition = false;
-    }
+	}
 
 	private void StilettoCompatibility(bool launching)
 	{
@@ -331,10 +335,10 @@ public class KKRagdollController : CharaCustomFunctionController
 		{
 			base.transform.gameObject.GetComponent<Stiletto.HeelInfo>().enabled = true;
 		}
-    }
+	}
 
 	public bool stilettoInstalled = false;
-	
+
 	private void ToggleRagdoll()
 	{
 		if (!ready)
@@ -342,16 +346,16 @@ public class KKRagdollController : CharaCustomFunctionController
 			return;
 		}
 		GenerateObjectColliders();
-        bool wasIkOn = base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>().enabled;
-        if (!isRagdoll)
+		bool wasIkOn = base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>().enabled;
+		if (!isRagdoll)
 		{
-			
-            // TODO: Before the ragdoll code can run, we need to handle FK and IK being on.
-            // FK and IK settings in Koikatsu are very weird and run through multiple checks/functions before
-            // toggling, so as far as I can tell, this is not an easy patch. If you can find a way to
-            // seamlessly turn off IK AND FK before the ragdoll begins, I will kiss you. Thx ;3
 
-            OCIChar ociChar = StudioObjectExtensions.GetOCIChar(base.ChaControl);
+			// TODO: Before the ragdoll code can run, we need to handle FK and IK being on.
+			// FK and IK settings in Koikatsu are very weird and run through multiple checks/functions before
+			// toggling, so as far as I can tell, this is not an easy patch. If you can find a way to
+			// seamlessly turn off IK AND FK before the ragdoll begins, I will kiss you. Thx ;3
+
+			OCIChar ociChar = StudioObjectExtensions.GetOCIChar(base.ChaControl);
 			if (ociChar.oiCharInfo.enableFK || fkDebug)
 			{
 				ociChar.oiCharInfo.enableFK = false;
@@ -360,7 +364,7 @@ public class KKRagdollController : CharaCustomFunctionController
 			ociChar.ChangeLookNeckPtn(3);
 
 
-            foreach (BoneInfo bone in bones)
+			foreach (BoneInfo bone in bones)
 			{
 				Rigidbody component = bone.anchor.GetComponent<Rigidbody>();
 				component.isKinematic = false;
@@ -372,10 +376,10 @@ public class KKRagdollController : CharaCustomFunctionController
 			base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_R/cf_j_shoulder_R/cf_j_arm00_R/cf_j_forearm01_R/cf_j_hand_R/cf_s_hand_R").gameObject.GetComponent<Animator>().enabled = false;
 			// We disable KKABMX on the model before ragdolling - this fixes any gliding issues the ragdoll could have.
 			if (ToggleKKABMX.Value) { base.transform.gameObject.GetComponent<KKABMX.Core.BoneController>().enabled = false; }
-            if (wasIkOn && AutoIKToggle.Value)
+			if (wasIkOn && AutoIKToggle.Value)
 			{
 				base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>().enabled = false;
-            }
+			}
 			isRagdoll = true;
 			if (TwitchToggle.Value) { TwitchSimExec(false); }
 			return;
@@ -385,17 +389,17 @@ public class KKRagdollController : CharaCustomFunctionController
 			Rigidbody component2 = bone2.anchor.GetComponent<Rigidbody>();
 			component2.isKinematic = true;
 			component2.useGravity = false;
-        }
+		}
 		base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<Animator>().enabled = true;
-        base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<ObservableLateUpdateTrigger>().enabled = true;
-        base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_L/cf_j_shoulder_L/cf_j_arm00_L/cf_j_forearm01_L/cf_j_hand_L/cf_s_hand_L").gameObject.GetComponent<Animator>().enabled = true;
-        base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_R/cf_j_shoulder_R/cf_j_arm00_R/cf_j_forearm01_R/cf_j_hand_R/cf_s_hand_R").gameObject.GetComponent<Animator>().enabled = true;
-        if (ToggleKKABMX.Value) { base.transform.gameObject.GetComponent<KKABMX.Core.BoneController>().enabled = true; }
-        if (wasIkOn && AutoIKToggle.Value)
-        {
-            base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>().enabled = true;
-        }
-        isRagdoll = false;
+		base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<ObservableLateUpdateTrigger>().enabled = true;
+		base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_L/cf_j_shoulder_L/cf_j_arm00_L/cf_j_forearm01_L/cf_j_hand_L/cf_s_hand_L").gameObject.GetComponent<Animator>().enabled = true;
+		base.transform.Find("BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_R/cf_j_shoulder_R/cf_j_arm00_R/cf_j_forearm01_R/cf_j_hand_R/cf_s_hand_R").gameObject.GetComponent<Animator>().enabled = true;
+		if (ToggleKKABMX.Value) { base.transform.gameObject.GetComponent<KKABMX.Core.BoneController>().enabled = true; }
+		if (wasIkOn && AutoIKToggle.Value)
+		{
+			base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>().enabled = true;
+		}
+		isRagdoll = false;
 	}
 
 	private void GenerateObjectColliders()
@@ -621,9 +625,9 @@ public class KKRagdollController : CharaCustomFunctionController
 			}
 			CapsuleCollider capsuleCollider = bone.anchor.gameObject.AddComponent<CapsuleCollider>();
 			//Below are manual settings for the size of the collisions that we find work a bit better than the automated values.
-            if (bone.name.Contains("Foot"))
-            {
-                capsuleCollider.direction = 2;
+			if (bone.name.Contains("Foot"))
+			{
+				capsuleCollider.direction = 2;
 				Vector3 zero = Vector3.zero;
 				zero[direction] = distance * 0.5f;
 				capsuleCollider.center = zero + new Vector3(0f, -0.01f, 0.05f);
@@ -632,31 +636,31 @@ public class KKRagdollController : CharaCustomFunctionController
 			}
 			else if ((bone.name.Contains("Knee")) || (bone.name.Contains("Hips")))
 			{
-                capsuleCollider.direction = direction;
-                Vector3 zero = Vector3.zero;
-                zero[direction] = distance * 0.5f;
-                capsuleCollider.center = zero - new Vector3(0f, 0f, 0.02f);
-                capsuleCollider.height = Mathf.Abs(distance);
-                capsuleCollider.radius = Mathf.Abs(distance * bone.radiusScale) - 0.02f;
-            }
+				capsuleCollider.direction = direction;
+				Vector3 zero = Vector3.zero;
+				zero[direction] = distance * 0.5f;
+				capsuleCollider.center = zero - new Vector3(0f, 0f, 0.02f);
+				capsuleCollider.height = Mathf.Abs(distance);
+				capsuleCollider.radius = Mathf.Abs(distance * bone.radiusScale) - 0.02f;
+			}
 			else if (bone.name.Contains("Elbow"))
 			{
-                capsuleCollider.direction = direction;
-                Vector3 zero = Vector3.zero;
-                zero[direction] = distance * 0.5f;
-                capsuleCollider.center = zero;
-                capsuleCollider.height = Mathf.Abs(distance);
-                capsuleCollider.radius = Mathf.Abs(distance * bone.radiusScale) - 0.03f;
-            }
+				capsuleCollider.direction = direction;
+				Vector3 zero = Vector3.zero;
+				zero[direction] = distance * 0.5f;
+				capsuleCollider.center = zero;
+				capsuleCollider.height = Mathf.Abs(distance);
+				capsuleCollider.radius = Mathf.Abs(distance * bone.radiusScale) - 0.03f;
+			}
 			else if (bone.name.Contains("Arm"))
 			{
-                capsuleCollider.direction = direction;
-                Vector3 zero = Vector3.zero;
-                zero[direction] = distance * 0.5f;
-                capsuleCollider.center = zero - new Vector3(0f, 0f, 0.01f);
-                capsuleCollider.height = Mathf.Abs(distance);
-                capsuleCollider.radius = Mathf.Abs(distance * bone.radiusScale) - 0.02f;
-            }
+				capsuleCollider.direction = direction;
+				Vector3 zero = Vector3.zero;
+				zero[direction] = distance * 0.5f;
+				capsuleCollider.center = zero - new Vector3(0f, 0f, 0.01f);
+				capsuleCollider.height = Mathf.Abs(distance);
+				capsuleCollider.radius = Mathf.Abs(distance * bone.radiusScale) - 0.02f;
+			}
 			else
 			{
 				capsuleCollider.direction = direction;
@@ -665,8 +669,8 @@ public class KKRagdollController : CharaCustomFunctionController
 				capsuleCollider.center = zero;
 				capsuleCollider.height = Mathf.Abs(distance);
 				capsuleCollider.radius = Mathf.Abs(distance * bone.radiusScale);
-            }
-        }
+			}
+		}
 	}
 
 	private void Cleanup()
@@ -706,11 +710,12 @@ public class KKRagdollController : CharaCustomFunctionController
 			// bone.anchor.GetComponent<Rigidbody>().drag = 2f;
 			if (bone.name.Contains("Head"))
 			{
-                bone.anchor.GetComponent<Rigidbody>().angularDrag = 10f;
-            } else
+				bone.anchor.GetComponent<Rigidbody>().angularDrag = 10f;
+			}
+			else
 			{
-                bone.anchor.GetComponent<Rigidbody>().angularDrag = 2f;
-            }
+				bone.anchor.GetComponent<Rigidbody>().angularDrag = 2f;
+			}
 			bone.anchor.GetComponent<Rigidbody>().isKinematic = true;
 			bone.anchor.GetComponent<Rigidbody>().useGravity = false;
 		}
@@ -989,7 +994,7 @@ public class KKRagdollController : CharaCustomFunctionController
 
 	private bool isTwitching = false;
 
-    private List<BoneInfo> twitchBones = new List<BoneInfo>();
+	private List<BoneInfo> twitchBones = new List<BoneInfo>();
 
 	/* private int twitchForceMin = 500;
 
@@ -1003,10 +1008,10 @@ public class KKRagdollController : CharaCustomFunctionController
     
 	private float delayMax = 2f; */
 
-    private bool TwitchSimPrep()
+	private bool TwitchSimPrep()
 	{
 		UnityEngine.Debug.Log("HIT TWITCHSIMPREP FOR " + base.ChaControl.fileParam.fullname);
-		foreach (BoneInfo bone in bones) 
+		foreach (BoneInfo bone in bones)
 		{
 			if ((bone.name.Contains("Right")) || (bone.name.Contains("Left")))
 			{
@@ -1022,7 +1027,7 @@ public class KKRagdollController : CharaCustomFunctionController
 		UnityEngine.Debug.Log("FIRED TWITCHSIMEXEC ON " + base.ChaControl.fileParam.fullname);
 		if (TwitchToggle.Value)
 		{
-            if (!isTwitching && isRagdoll && TwitchSimPrep())
+			if (!isTwitching && isRagdoll && TwitchSimPrep())
 			{
 				UnityEngine.Debug.Log("EVERYTHING IS TRUE! " + base.ChaControl.fileParam.fullname);
 				StartCoroutine(TwitchSim(manual));
@@ -1040,18 +1045,18 @@ public class KKRagdollController : CharaCustomFunctionController
 		return num;
 	}
 
-    private IEnumerator TwitchSim(bool manual)
-    {
+	private IEnumerator TwitchSim(bool manual)
+	{
 		isTwitching = true;
 		if (!manual)
 		{
 			UnityEngine.Debug.Log("Seconds told to wait: " + TwitchStartDelay.Value + base.ChaControl.fileParam.fullname);
 			yield return new WaitForSeconds(TwitchStartDelay.Value);
 		}
-        UnityEngine.Debug.Log("TWITCH START! " + base.ChaControl.fileParam.fullname);
+		UnityEngine.Debug.Log("TWITCH START! " + base.ChaControl.fileParam.fullname);
 
-        float startTime = Time.time;
-        float endTime = startTime + TwitchDuration.Value;
+		float startTime = Time.time;
+		float endTime = startTime + TwitchDuration.Value;
 
 		// Loop  for given duration
 		/* do
@@ -1064,7 +1069,7 @@ public class KKRagdollController : CharaCustomFunctionController
 			selectedRigid.AddForce(new Vector3(xRandom, yRandom, zRandom));
             UnityEngine.Debug.Log("TWITCH!" + base.ChaControl.fileParam.fullname + ": x:" + xRandom + " y:" + yRandom + " z:" + zRandom + " on body part '" + selectedBone.name + "'");
             yield return new WaitForSeconds(UnityEngine.Random.Range(delayMin, delayMax));
-		}	*/	
+		}	*/
 		do
 		{
 			var groupSize = rnd.Next(1, 5);
@@ -1075,17 +1080,17 @@ public class KKRagdollController : CharaCustomFunctionController
 				var selectedRigid = selectedBone.anchor.GetComponent<Rigidbody>();
 				float xRandom = NegativeRandomizer(rnd.Next(TwitchMinForce.Value, TwitchMaxForce.Value + 1));
 				float yRandom = NegativeRandomizer(rnd.Next(TwitchMinForce.Value, TwitchMaxForce.Value + 1));
-                float zRandom = NegativeRandomizer(rnd.Next(TwitchMinForce.Value, TwitchMaxForce.Value + 1));
+				float zRandom = NegativeRandomizer(rnd.Next(TwitchMinForce.Value, TwitchMaxForce.Value + 1));
 				selectedRigid.AddForce(new Vector3(xRandom, yRandom, zRandom));
 				UnityEngine.Debug.Log("TWITCH!" + base.ChaControl.fileParam.fullname + ": x:" + xRandom + " y:" + yRandom + " z:" + zRandom + " on body part '" + selectedBone.name + "' - Bone " + i + " of " + groupSize + ".");
 				i++;
 			}
-            yield return new WaitForSeconds(UnityEngine.Random.Range(TwitchMinDelay.Value, TwitchMaxDelay.Value));
+			yield return new WaitForSeconds(UnityEngine.Random.Range(TwitchMinDelay.Value, TwitchMaxDelay.Value));
 		}
 		while (Time.time < endTime);
 		//Reset Vars
-        isTwitching = false;
+		isTwitching = false;
 		UnityEngine.Debug.Log("REACHED END OF TWITCH LOOP " + base.ChaControl.fileParam.fullname);
-    }
+	}
 
 }
