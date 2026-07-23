@@ -594,8 +594,8 @@ public class KKRagdollController : CharaCustomFunctionController
 		AddMirroredJoint("Shoulder", leftShoulder, rightShoulder, "Middle Spine", worldRight, worldForward, -10f, 25f, 20f, 20f, typeof(CapsuleCollider), 0.15f, 1f);
 		AddJoint("Left Arm", leftArm, "Left Shoulder", leftArmTwist, leftArmSwing, -95f, 60f, 95f, 95f, typeof(CapsuleCollider), 0.2f, 1f);
 		AddJoint("Right Arm", rightArm, "Right Shoulder", rightArmTwist, rightArmSwing, -95f, 60f, 95f, 95f, typeof(CapsuleCollider), 0.2f, 1f);
-		AddJoint("Left Elbow", leftElbow, "Left Arm", worldUp, worldRight, -155f, 0f, 15f, 0f, typeof(CapsuleCollider), 0.15f, 1f);
-		AddJoint("Right Elbow", rightElbow, "Right Arm", worldUp, worldRight, 0f, 155f, 15f, 0f, typeof(CapsuleCollider), 0.15f, 1f);
+		AddJoint("Left Elbow", leftElbow, "Left Arm", worldUp, worldRight, -155f, 0f, 15f, 0f, typeof(CapsuleCollider), 0.25f, 1f);
+		AddJoint("Right Elbow", rightElbow, "Right Arm", worldUp, worldRight, 0f, 155f, 15f, 0f, typeof(CapsuleCollider), 0.25f, 1f);
 		AddMirroredJoint("Hand", leftHand, rightHand, "Elbow", worldRight, worldForward, -10f, 20f, 30f, 30f, typeof(CapsuleCollider), 0.2f, 0.5f);
 		AddJoint("Neck", neck, "Middle Spine", worldRight, worldForward, -50f, 15f, 40f, 45f, typeof(CapsuleCollider), 0.25f, 1f);
 		AddJoint("Head", head, "Neck", worldRight, worldForward, -10f, 60f, 15f, 15f, null, 1.5f, 1f);
