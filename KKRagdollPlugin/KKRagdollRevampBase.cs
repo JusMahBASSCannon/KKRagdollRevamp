@@ -87,12 +87,30 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
     public static ConfigEntry<bool> CollidersFix { get; private set; }
 
+    public static ConfigEntry<KeyboardShortcut> LockPoseShortcut { get; private set; }
+
+    public static ConfigEntry<float> PoseLockSpring { get; private set; }
+
+    public static ConfigEntry<float> PoseLockDamper { get; private set; }
+
+    public static ConfigEntry<KeyboardShortcut> GravityShortcut { get; private set; }
+
+    public static ConfigEntry<float> GravityScale { get; private set; }
+
     const bool k_AttachToCenterOfMass = false;
 
     private SpringJoint m_SpringJoint;
 
+    private Vector3 baseGravity;
+
+    private bool gravityEnabled = true;
+
     private void Awake()
     {
+        // Snapshot gravity before we ever touch it, so toggling it back on restores
+        // the actual configured value rather than a hardcoded constant.
+        baseGravity = Physics.gravity;
+
         if (StudioAPI.InsideStudio)
         {
             CharacterApi.RegisterExtraBehaviour<KKRagdollController>("KKRagdollPlugin");
@@ -117,9 +135,9 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
         AutoLockCamera = base.Config.Bind("Click and Drag", "Auto Lock Camera", defaultValue: true, new ConfigDescription("Automatically lock the camera when dragging a ragdoll. !!This should always be on unless you have a plan!!", null, new ConfigurationManagerAttributes { Order = 2 }));
 
-        k_Spring = base.Config.Bind("Click and Drag", "Spring", 2000f, new ConfigDescription("The strength of the drag. This should be pretty high for best results.", new AcceptableValueRange<float>(300f, 2000f), new ConfigurationManagerAttributes { Order = 3 }));
+        k_Spring = base.Config.Bind("Click and Drag", "Spring", 800f, new ConfigDescription("The strength of the drag. This should be pretty high for best results.", new AcceptableValueRange<float>(300f, 2000f), new ConfigurationManagerAttributes { Order = 3 }));
 
-        k_Damper = base.Config.Bind("Click and Drag", "Damper", 0.01f, new ConfigDescription("How fast high-speed motion is lost. Low values increase the floppiness, high values increase precision.", new AcceptableValueRange<float>(0.01f, 200f), new ConfigurationManagerAttributes { Order = 4 }));
+        k_Damper = base.Config.Bind("Click and Drag", "Damper", 40f, new ConfigDescription("How fast high-speed motion is lost. Low values increase the floppiness, high values increase precision.", new AcceptableValueRange<float>(0.01f, 200f), new ConfigurationManagerAttributes { Order = 4 }));
 
         k_Drag = base.Config.Bind("Click and Drag", "Linear Drag", 10f, new ConfigDescription("The max speed of the ragdoll in the air. Low values are recommended.", new AcceptableValueRange<float>(10f, 100f), new ConfigurationManagerAttributes { Order = 5 }));
 
@@ -144,6 +162,16 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         ExplodePower = base.Config.Bind("Explode", "Power", 5f, new ConfigDescription("The strength of the explosion.", new AcceptableValueRange<float>(0.1f, 1000f), new ConfigurationManagerAttributes { Order = 4 }));
 
         ExplodeUpwardsForce = base.Config.Bind("Explode", "Upwards Force", 5f, new ConfigDescription("How much the explosion pushes the ragdoll upwards.", new AcceptableValueRange<float>(0.1f, 1000f), new ConfigurationManagerAttributes { Order = 5 }));
+
+        LockPoseShortcut = base.Config.Bind("Pose Lock", "Lock/Unlock Pose", new KeyboardShortcut(KeyCode.F9), new ConfigDescription("Freeze the selected ragdoll's joints in their current pose. Press again to unlock.", null, new ConfigurationManagerAttributes { Order = 1 }));
+
+        PoseLockSpring = base.Config.Bind("Pose Lock", "Spring Strength", 600f, new ConfigDescription("How strongly locked joints resist being rotated away from their remembered pose. Higher values = stiffer pose.", new AcceptableValueRange<float>(10f, 2000f), new ConfigurationManagerAttributes { Order = 2 }));
+
+        PoseLockDamper = base.Config.Bind("Pose Lock", "Damper", 120f, new ConfigDescription("Damping on angular velocity for locked joints. Higher values reduce oscillation when joints are disturbed.", new AcceptableValueRange<float>(1f, 200f), new ConfigurationManagerAttributes { Order = 3 }));
+
+        GravityShortcut = base.Config.Bind("Gravity", "Toggle Gravity", new KeyboardShortcut(KeyCode.F12), new ConfigDescription("Toggles gravity on/off for the whole scene. Press again to restore it.", null, new ConfigurationManagerAttributes { Order = 1 }));
+
+        GravityScale = base.Config.Bind("Gravity", "Gravity Scale", 1f, new ConfigDescription("Multiplier applied to normal gravity while gravity is toggled on. 0 = weightless, 1 = normal, higher = heavier.", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = 2 }));
     }
 
     Dictionary<string, BepInEx.PluginInfo> activePlugins = new Dictionary<string, BepInEx.PluginInfo>();
@@ -226,6 +254,24 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         {
             Explosion();
         }
+
+        if (LockPoseShortcut.Value.IsDown())
+        {
+            foreach (OCIChar item in StudioAPI.GetSelectedCharacters())
+            {
+                KKRagdollPlugin.KKRagdollController ctrl = item.GetChaControl().gameObject.GetComponent<KKRagdollPlugin.KKRagdollController>();
+                if (ctrl == null || !ctrl.IsActiveRagdoll) continue;
+                if (ctrl.isPoseLocked) { ctrl.UnlockPose(); } else { ctrl.LockPose(); }
+            }
+        }
+
+        if (GravityShortcut.Value.IsDown())
+        {
+            gravityEnabled = !gravityEnabled;
+        }
+        // Re-applied every frame so a live edit to Gravity Scale in the config manager
+        // takes effect immediately.
+        Physics.gravity = gravityEnabled ? baseGravity * GravityScale.Value : Vector3.zero;
     }
 
     private void Explosion()
@@ -293,15 +339,30 @@ public class KKRagdollRevampBase : BaseUnityPlugin
 
             m_SpringJoint.transform.position = hit.point;
             m_SpringJoint.anchor = Vector3.zero;
-
-            m_SpringJoint.spring = k_Spring.Value;
-            m_SpringJoint.damper = k_Damper.Value;
-            m_SpringJoint.maxDistance = k_Distance.Value;
             m_SpringJoint.connectedBody = hit.rigidbody;
+
+            ApplyDragSpring();
+            m_SpringJoint.maxDistance = k_Distance.Value;
 
             StartCoroutine("DragObject", hit.distance);
             break;
         }
+    }
+
+    const float FrozenDragSpring = 200f;
+    const float FrozenDragDamper = 80f;
+
+    // While the dragged bone's character has Pose Lock active, a normal drag spring
+    // overpowers the pose-lock torque for control of the same joints -- drop the
+    // spring and raise the damper so the drag stays gentle enough that pose lock
+    // still holds. Re-checked every frame of the drag, not just at grab time.
+    private void ApplyDragSpring()
+    {
+        Rigidbody connected = m_SpringJoint.connectedBody;
+        KKRagdollPlugin.KKRagdollController ctrl = connected != null ? connected.GetComponentInParent<KKRagdollPlugin.KKRagdollController>() : null;
+        bool frozen = ctrl != null && ctrl.isPoseLocked;
+        m_SpringJoint.spring = frozen ? FrozenDragSpring : k_Spring.Value;
+        m_SpringJoint.damper = frozen ? FrozenDragDamper : k_Damper.Value;
     }
 
     [DllImport("USER32.dll", CallingConvention = CallingConvention.StdCall)]
@@ -326,6 +387,7 @@ public class KKRagdollRevampBase : BaseUnityPlugin
         var lockPosition = new Vector3();
         while (Input.GetMouseButton(0))
         {
+            ApplyDragSpring();
             var ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if ((RotateinPlaceShortcut.Value.IsPressed()) || (RotateinPlaceWIP.Value))
             {
