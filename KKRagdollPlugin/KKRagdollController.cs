@@ -96,6 +96,12 @@ public class KKRagdollController : CharaCustomFunctionController
 
 	private string headName = "BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_j_neck/cf_j_head";
 
+	private string neckName = "BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_j_neck";
+
+	private string leftShoulderName = "BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_L/cf_j_shoulder_L";
+
+	private string rightShoulderName = "BodyTop/p_cf_body_bone/cf_j_root/cf_n_height/cf_j_hips/cf_j_spine01/cf_j_spine02/cf_j_spine03/cf_d_shoulder_R/cf_j_shoulder_R";
+
 	public Transform pelvis = null;
 
 	public Transform leftHips = null;
@@ -131,6 +137,12 @@ public class KKRagdollController : CharaCustomFunctionController
 	public Transform lowerWaist = null;
 
 	public Transform head = null;
+
+	public Transform neck = null;
+
+	public Transform leftShoulder = null;
+
+	public Transform rightShoulder = null;
 
 	public Transform benis01 = null;
 
@@ -199,6 +211,18 @@ public class KKRagdollController : CharaCustomFunctionController
 	private bool isRagdoll = false;
 
 	private bool ragdollTransition = false;
+
+	public bool IsActiveRagdoll => isRagdoll && ready;
+
+	public bool isPoseLocked;
+
+	private Dictionary<Transform, Transform> poseLockParents = new Dictionary<Transform, Transform>();
+
+	private Dictionary<Transform, Quaternion> poseLockRelRots = new Dictionary<Transform, Quaternion>();
+
+	private RootMotion.FinalIK.FullBodyBipedIK ikComponentForLock;
+
+	private bool ikWasEnabledBeforeLock;
 
 	private bool _fireRagdoll;
 	
@@ -364,7 +388,67 @@ public class KKRagdollController : CharaCustomFunctionController
         {
             base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>().enabled = true;
         }
+        if (isPoseLocked) { UnlockPose(); }
         isRagdoll = false;
+	}
+
+	public void LockPose()
+	{
+		if (!isRagdoll || !ready) return;
+		poseLockParents.Clear();
+		poseLockRelRots.Clear();
+		foreach (BoneInfo bone in bones)
+		{
+			if (bone.parent == null) continue;
+			if (bone.anchor == null || bone.parent.anchor == null) continue;
+			poseLockParents[bone.anchor] = bone.parent.anchor;
+			poseLockRelRots[bone.anchor] = Quaternion.Inverse(bone.parent.anchor.rotation) * bone.anchor.rotation;
+		}
+		// IK fights the pose-lock torque if left running, so force it off while locked
+		// and restore whatever state it was actually in once unlocked.
+		ikComponentForLock = base.transform.Find("BodyTop/p_cf_body_bone").gameObject.GetComponent<RootMotion.FinalIK.FullBodyBipedIK>();
+		if (ikComponentForLock != null)
+		{
+			ikWasEnabledBeforeLock = ikComponentForLock.enabled;
+			ikComponentForLock.enabled = false;
+		}
+		isPoseLocked = true;
+	}
+
+	public void UnlockPose()
+	{
+		isPoseLocked = false;
+		poseLockParents.Clear();
+		poseLockRelRots.Clear();
+		if (ikComponentForLock != null)
+		{
+			ikComponentForLock.enabled = ikWasEnabledBeforeLock;
+			ikComponentForLock = null;
+		}
+	}
+
+	private void FixedUpdate()
+	{
+		if (!isPoseLocked || !isRagdoll || !ready) return;
+		float spring = PoseLockSpring.Value;
+		float damper = PoseLockDamper.Value;
+		foreach (KeyValuePair<Transform, Transform> kvp in poseLockParents)
+		{
+			Transform anchor = kvp.Key;
+			Transform parentAnchor = kvp.Value;
+			Rigidbody rb = anchor.GetComponent<Rigidbody>();
+			if (rb == null || rb.isKinematic) continue;
+			Quaternion targetRot = parentAnchor.rotation * poseLockRelRots[anchor];
+			Quaternion delta = targetRot * Quaternion.Inverse(anchor.rotation);
+			float angle;
+			Vector3 axis;
+			delta.ToAngleAxis(out angle, out axis);
+			if (angle > 180f) angle -= 360f;
+			// ForceMode.Acceleration ignores mass/inertia, so the same spring/damper
+			// gives every bone the same response regardless of size.
+			Vector3 torque = axis.normalized * (angle * Mathf.Deg2Rad) * spring - rb.angularVelocity * damper;
+			rb.AddTorque(torque, ForceMode.Acceleration);
+		}
 	}
 
 	private void GenerateObjectColliders()
@@ -427,6 +511,9 @@ public class KKRagdollController : CharaCustomFunctionController
 		upperWaist = base.transform.Find(upperWaistName);
 		lowerWaist = base.transform.Find(lowerWaistName);
 		head = base.transform.Find(headName);
+		neck = base.transform.Find(neckName);
+		leftShoulder = base.transform.Find(leftShoulderName);
+		rightShoulder = base.transform.Find(rightShoulderName);
 	}
 
 	private string CheckConsistency()
@@ -504,14 +591,14 @@ public class KKRagdollController : CharaCustomFunctionController
 		AddJoint("Right Hips", rightHips, "Lower Waist", worldRight, worldForward, -10f, 90f, 65f, 80f, typeof(CapsuleCollider), 0.2f, 1.5f);
 		AddMirroredJoint("Knee", leftKnee, rightKnee, "Hips", worldRight, worldForward, -130f, 0f, 0f, 0f, typeof(CapsuleCollider), 0.15f, 1.5f);
 		AddMirroredJoint("Foot", leftFoot, rightFoot, "Knee", worldRight, worldForward, -30f, 10f, 0f, 5f, typeof(CapsuleCollider), 0.2f, 1f);
-		AddJoint("Left Arm", leftArm, "Middle Spine", leftArmTwist, leftArmSwing, -95f, 60f, 95f, 95f, typeof(CapsuleCollider), 0.2f, 1f);
-		AddJoint("Right Arm", rightArm, "Middle Spine", rightArmTwist, rightArmSwing, -95f, 60f, 95f, 95f, typeof(CapsuleCollider), 0.2f, 1f);
-		AddJoint("Left Elbow", leftElbow, "Left Arm", worldUp, worldRight, -155f, 0f, 0f, 0f, typeof(CapsuleCollider), 0.15f, 1f);
-		AddJoint("Right Elbow", rightElbow, "Right Arm", worldUp, worldRight, 0f, 155f, 0f, 0f, typeof(CapsuleCollider), 0.15f, 1f);
-		// These joints are commented out due to twisting bugs with the wrists.
-		//AddJoint("Left Hand", leftHand, "Left Elbow", worldForward, worldRight, -40f, 90f, 30f, 10f, typeof(CapsuleCollider), 0.10f, 1f);
-		//AddJoint("Right Hand", rightHand, "Right Elbow", worldForward, worldRight, -40f, 90f, 30f, 10f, typeof(CapsuleCollider), 0.10f, 1f);
-		AddJoint("Head", head, "Middle Spine", worldRight, worldForward, -60f, 40f, 40f, 70f, null, 1.5f, 1f);
+		AddMirroredJoint("Shoulder", leftShoulder, rightShoulder, "Middle Spine", worldRight, worldForward, -10f, 25f, 20f, 20f, typeof(CapsuleCollider), 0.15f, 1f);
+		AddJoint("Left Arm", leftArm, "Left Shoulder", leftArmTwist, leftArmSwing, -95f, 60f, 95f, 95f, typeof(CapsuleCollider), 0.2f, 1f);
+		AddJoint("Right Arm", rightArm, "Right Shoulder", rightArmTwist, rightArmSwing, -95f, 60f, 95f, 95f, typeof(CapsuleCollider), 0.2f, 1f);
+		AddJoint("Left Elbow", leftElbow, "Left Arm", worldUp, worldRight, -155f, 0f, 15f, 0f, typeof(CapsuleCollider), 0.25f, 1f);
+		AddJoint("Right Elbow", rightElbow, "Right Arm", worldUp, worldRight, 0f, 155f, 15f, 0f, typeof(CapsuleCollider), 0.25f, 1f);
+		AddMirroredJoint("Hand", leftHand, rightHand, "Elbow", worldRight, worldForward, -10f, 20f, 30f, 30f, typeof(CapsuleCollider), 0.2f, 0.5f);
+		AddJoint("Neck", neck, "Middle Spine", worldRight, worldForward, -50f, 15f, 40f, 45f, typeof(CapsuleCollider), 0.25f, 1f);
+		AddJoint("Head", head, "Neck", worldRight, worldForward, -10f, 60f, 15f, 15f, null, 1.5f, 1f);
 	}
 
 	private BoneInfo FindBone(string name)
@@ -676,6 +763,9 @@ public class KKRagdollController : CharaCustomFunctionController
 			if (bone.name.Contains("Head"))
 			{
                 bone.anchor.GetComponent<Rigidbody>().angularDrag = 10f;
+            } else if (bone.name.Contains("Neck"))
+			{
+                bone.anchor.GetComponent<Rigidbody>().angularDrag = 20f;
             } else
 			{
                 bone.anchor.GetComponent<Rigidbody>().angularDrag = 2f;
